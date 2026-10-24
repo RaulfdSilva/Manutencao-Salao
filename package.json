@@ -1,0 +1,47 @@
+{
+  "name": "manutencao-salao",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "engines": {
+    "node": ">=24.13.0 <25"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "export:web": "expo export --platform web"
+  },
+  "dependencies": {
+    "expo": "~58.0.19",
+    "expo-constants": "~58.0.13",
+    "expo-linking": "~58.0.14",
+    "expo-router": "~58.0.26",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-web": "~0.21.4",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/react": "~19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^58.0.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}
