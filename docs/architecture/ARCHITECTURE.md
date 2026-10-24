@@ -1,6 +1,6 @@
 # Arquitetura
 
-Aplicativo modular com Expo Router e TypeScript strict. Nesta etapa há uma rota estática e a estrutura mínima para evolução; não existem casos de uso, persistência ou autenticação.
+Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática e, desde a entrega 01, domínio e casos de uso de membros. Não existem adaptadores de persistência, autenticação ou telas de membros.
 
 ## Direção das dependências
 
@@ -27,3 +27,9 @@ Autenticação sem e-mail requer investigação específica: avaliar recursos su
 ## Testes e evolução
 
 Vitest em Node testa TypeScript puro e integração de tooling. Futuras regras exigem testes de comportamento e falhas. Testes de componentes e ponta a ponta serão escolhidos quando existirem fluxos reais, sem simular segurança inexistente. Exportação web valida Metro/Router; testes nativos continuam necessários antes de distribuição. Novas dependências e decisões estruturais devem ser justificadas por necessidade e ADR quando relevante.
+
+## Módulo de membros — entrega 01
+
+`src/domain/members` contém `Member` imutável, tipos, erros e contrato de repositório sem exclusão. `src/application/members` contém sete casos de uso reunidos em `MemberUseCases`, erros e portas de transação, auditoria, atribuições futuras, relógio e identificadores. Não há abstrações genéricas, contêiner de injeção ou serviços globais. Testes ficam em `tests/members`, permitindo que o domínio continue sem imports de bibliotecas de testes.
+
+A unidade de trabalho mantém a orquestração independente de banco e tarefas. Ela exige atomicidade e serialização no servidor; o adaptador em memória existe somente em testes e não constitui autenticação ou implementação de produção. Projeções de saída omitem telefone de solicitantes que não sejam administradores ativos, inclusive após autodesativação ou rebaixamento. Instâncias `Member` e `toRecord()` são objetos internos com telefone; não devem ser serializados diretamente para respostas públicas. Ver ADR-002.

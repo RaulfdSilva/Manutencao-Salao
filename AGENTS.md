@@ -10,7 +10,7 @@
 6. Nunca afirmar que testes passaram sem executar e observar os resultados; distinguir falhas, skips e verificações não executadas.
 7. Informar limitações do ambiente, inclusive ausência de emuladores, dispositivos ou credenciais.
 8. Não introduzir dependências sem justificar necessidade e compatibilidade com Expo.
-9. Não adicionar funcionalidades fora do escopo. Este bootstrap não autoriza autenticação, calendário ou telas funcionais.
+9. Não adicionar funcionalidades fora do escopo. A entrega 01 autoriza domínio/casos de uso/testes de membros. Autenticação, persistência, calendário e novas telas exigem autorização específica.
 10. Ao finalizar, apresentar resumo, arquivos alterados, testes e pendências, além de branch, commit e estado da publicação.
 
 ## Padrões

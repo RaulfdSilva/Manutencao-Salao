@@ -1,3 +1,3 @@
 # Domain
 
-Reservado para entidades, invariantes e contratos necessários ao produto. TypeScript puro, sem React, Expo, SDKs de persistência ou dependências das camadas externas. Nenhuma regra de negócio foi implementada neste bootstrap.
+Entidades, invariantes e contratos em TypeScript puro, sem React, Expo, bibliotecas de validação ou persistência. `members/` contém a entidade imutável Member, erros e contrato de armazenamento sem exclusão. A regra que envolve vários membros (último administrador) é coordenada pela aplicação dentro da unidade de trabalho. Ver ADR-002.

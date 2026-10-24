@@ -29,3 +29,11 @@ Reportar vulnerabilidades de modo privado ao mantenedor por canal acordado; o ca
 `npm audit --omit=dev --audit-level=high` reportou cinco ocorrências de severidade alta na cadeia da CLI do Expo (incluindo pacotes agregadores), decorrentes de `node-forge@1.4.0` e `zod@3.25.76` transitivos. A dependência direta da aplicação é Zod 4.6.7. O registry ainda informa node-forge 1.4.0 como estável mais recente. A CLI do Expo declara Zod 3; substituir essa dependência por Zod 4 via override não é uma correção de compatibilidade comprovada.
 
 Advisories: [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) e [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5). O npm propõe downgrade incompatível para Expo 54 como correção forçada; ele não foi aplicado. Acompanhar correção upstream e repetir auditoria antes de distribuição. Esses resultados são pendências de dependências, não uma declaração de segurança do aplicativo.
+
+## Limites da entrega 01 de membros
+
+A aplicação verifica o cadastro atual do ator, restringe escritas a administradores ativos e projeta respostas sem telefone para os demais. `MemberActor` é um contrato para a futura identidade resolvida no servidor: receber esse objeto não autentica uma pessoa. O domínio não deve ser exposto diretamente como resposta porque seu registro interno contém telefone.
+
+A proteção do último administrador exige transação serializada por congregação no servidor. O adaptador em memória e seus testes demonstram a orquestração, não segurança ou concorrência distribuída reais. Remoção de atribuições futuras, auditoria e mudança de estado precisarão compartilhar a mesma transação; um adaptador que ignore essas portas é incompleto. Dados históricos não podem ser apagados.
+
+Reativar só altera o estado do membro: não existe operação de dispositivos nestes casos de uso. O futuro módulo de autenticação deve continuar negando dispositivos explicitamente revogados e verificar a situação atual do membro em cada operação protegida. O primeiro administrador não pode ser criado por um endpoint público sem identidade; o procedimento inicial controlado será implementado separadamente. Permanecem pendentes testes de servidor, RLS, sessões e revogação.

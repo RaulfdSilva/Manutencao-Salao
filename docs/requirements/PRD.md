@@ -2,11 +2,11 @@
 
 ## Objetivo e estágio
 
-Organizar manutenções preventivas e corretivas dos equipamentos de Áudio e Vídeo de uma congregação. Este estágio entrega somente infraestrutura, documentação e ferramentas de qualidade.
+Organizar manutenções preventivas e corretivas dos equipamentos de Áudio e Vídeo de uma congregação. A entrega 01 acrescenta domínio e casos de uso de membros com testes unitários, sem telas, persistência ou autenticação.
 
 ## Requisitos confirmados e rastreabilidade
 
-O briefing forneceu os temas, mas não o texto original individual dos RF-01 a RF-24. A numeração abaixo é uma decomposição proposta desses temas para rastreabilidade; deve ser validada com o responsável antes da implementação. Não implica aprovação de detalhes ausentes. Todos os requisitos estão **documentados, não implementados**.
+O briefing forneceu os temas, mas não o texto original individual dos RF-01 a RF-24. A numeração abaixo é uma decomposição proposta desses temas para rastreabilidade; deve ser validada com o responsável antes da implementação. Não implica aprovação de detalhes ausentes. Os RF-01 a RF-24 continuam **documentados, não implementados integralmente**. A entrega de membros descrita abaixo implementa apenas regras locais e contratos; não comprova autorização no servidor.
 
 | ID    | Requisito baseado no briefing                                                         |
 | ----- | ------------------------------------------------------------------------------------- |
@@ -44,7 +44,7 @@ Interface em português brasileiro; contas individuais sem e-mail; adesão volun
 ## Decisões pendentes
 
 - Validar esta numeração e critérios de aceite detalhados com o responsável.
-- Definir identificação de conta, provisionamento, recuperação sem e-mail, aprovadores e papéis/permissões.
+- Definir identificação de conta, provisionamento e recuperação sem e-mail. Os papéis e a política local inicial de membros estão definidos abaixo.
 - Definir duração, entrega, limitação de tentativas e procedimento de revogação dos tokens e sessões.
 - Obter uma exportação real e anonimizada do Hourglass: formato, campos, encoding, timezone, identificação de pessoas, duplicatas e versões ainda desconhecidos. Não assumir CSV, JSON ou API disponível.
 - Definir fim de semana em fronteiras de mês, horário/fuso da congregação, feriados, exceções, conflitos e efeitos do reagendamento nas próximas ocorrências.
@@ -55,4 +55,29 @@ Interface em português brasileiro; contas individuais sem e-mail; adesão volun
 
 ## Fora do escopo deste estágio
 
-Implementar autenticação, backend, calendário, importação, notificações, modelos de negócio, telas funcionais ou migrações. Protótipos visuais e integrações exigem nova autorização.
+Implementar autenticação, backend, calendário, importação, notificações, telas funcionais ou migrações. A autorização da entrega 01 abrange somente domínio, contratos, casos de uso e testes de membros. Integrações exigem nova autorização.
+
+## Entrega 01 — domínio de membros
+
+Regras aprovadas para este módulo:
+
+- Nome obrigatório e telefone opcional, visível somente a administradores ativos.
+- Um papel por membro: `administrator`, `maintenance_manager` ou `member`; situação `active` ou `inactive`.
+- Somente administradores ativos cadastram membros. A política conservadora desta entrega restringe também edição, troca de papel, desativação, reativação e listagem a administradores ativos. Demais membros ativos podem consultar somente o próprio cadastro, sem a propriedade telefone. A ampliação dessas permissões exige decisão explícita.
+- Identificador e congregação são imutáveis; identidades são fornecidas por um gerador injetado e devem ser únicas no armazenamento. O domínio trata identificadores como valores opacos, não documentos pessoais.
+- Criação produz membro ativo. Nome e telefone têm espaços nas extremidades removidos; telefone ausente ou em branco vira `null`. Na edição, telefone omitido preserva o valor; `null` remove. Não se impõe limite de nome ou formato internacional sem aprovação. Telefone não comprova identidade e não é único.
+- Desativação preserva o cadastro e suas referências históricas; solicita retirada das atribuições futuras com auditoria das retiradas. O contrato é obrigatório, mas não há tarefas ou adaptador implementado.
+- Reativação restaura o estado ativo, que é uma condição de elegibilidade, sem restaurar atribuições ou reautorizar dispositivos explicitamente revogados. Não há integração com dispositivos nesta entrega.
+- A congregação não pode perder seu último administrador ativo por desativação ou alteração de papel. Administradores inativos ou de outras congregações não contam.
+- Cadastro comum exige administrador existente. O primeiro administrador dependerá de procedimento inicial seguro e controlado pelo responsável técnico, ainda não implementado.
+- Operações sem mudança efetiva são idempotentes, sem nova gravação, retirada ou evento de mudança.
+
+### Critérios de aceite locais
+
+Validação de dados inválidos; preservação de identidade; autorização baseada no cadastro atual do ator; consulta sem vazamento de telefone; mudanças de papel/situação; proteção do último administrador; solicitação de retirada de atribuições; auditoria de mudanças sem valores pessoais; propagação de falhas e rollback exercitado em adaptador exclusivo de testes.
+
+### Integrações ainda pendentes
+
+Servidor deve resolver a identidade do ator a partir de sessão válida; nunca aceitar o `MemberActor` do corpo da requisição como autenticação. Persistência deve garantir unicidade, isolamento de congregações e transações com serialização por congregação, incluindo leitura do ator, contagem de administradores, escrita, retirada de atribuições e auditoria. O futuro módulo de tarefas definirá exatamente o significado de atribuição futura usando o instante fornecido, preservará execuções passadas e auditará cada retirada. Chamadas externas de melhor esforço não cumprem o contrato atômico.
+
+A listagem atual é um contrato local sem paginação; paginação, minimização de consultas e controle de edições obsoletas devem ser definidos antes de expor uma API. Política de retenção, formato do telefone, limites de tamanho e distribuição de nomes para participantes continuam pendentes. Ver ADR-002.

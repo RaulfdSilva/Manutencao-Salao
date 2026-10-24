@@ -1,6 +1,6 @@
 # Manutenção Salão
 
-Base de um aplicativo móvel para gerenciamento de manutenções preventivas e corretivas de Áudio e Vídeo de uma congregação. **Estágio: infraestrutura inicial; nenhuma funcionalidade de negócio implementada.** A única tela é uma indicação estática de inicialização.
+Base de um aplicativo móvel para gerenciamento de manutenções preventivas e corretivas de Áudio e Vídeo de uma congregação. **Estágio: bootstrap e entrega 01 do domínio de membros, sem integração de produção.** A única tela é uma indicação estática de inicialização.
 
 ## Desenvolvimento
 
@@ -26,22 +26,22 @@ npx expo install --check
 npm run export:web
 ```
 
-`npm run format` aplica formatação; `npm run test:watch` permite desenvolvimento contínuo. Vitest usa Node para testes TypeScript; os exemplos verificam o runner, leitura da configuração real e validação Zod. Não são testes de UI ou de negócio. A CI executa as verificações acima; build nativo e testes em dispositivo ficam para um ambiente com SDKs nativos.
+`npm run format` aplica formatação; `npm run test:watch` permite desenvolvimento contínuo. Vitest usa Node para testes TypeScript. Os testes de bootstrap verificam o runner e a configuração Expo com Zod; os testes de membros verificam domínio e casos de uso. Não há testes de UI ou banco. A CI executa as verificações acima; build nativo e testes em dispositivo ficam para um ambiente com SDKs nativos.
 
 ## Estrutura
 
 ```text
 app/                       rotas e layout Expo Router
-src/domain/                entidades e contratos futuros
-src/application/           casos de uso futuros
+src/domain/                entidades, regras e contratos de membros
+src/application/           casos de uso e portas de membros
 src/infrastructure/        adaptadores e integrações futuras
 src/presentation/          componentes de interface
-tests/                    testes de infraestrutura
+tests/                     testes de infraestrutura e membros
 docs/                     requisitos, arquitetura, segurança e decisões
 .github/workflows/ci.yml    verificações automatizadas
 ```
 
-As camadas vazias são documentadas, sem entidades, repositórios ou serviços artificiais. O domínio permanece independente das tecnologias externas.
+A organização em camadas foi mantida; domínio e aplicação contêm as regras e os contratos de membros, sem adaptadores de produção. O domínio permanece independente das tecnologias externas.
 
 ## Documentação
 
@@ -51,5 +51,6 @@ As camadas vazias são documentadas, sem entidades, repositórios ou serviços a
 - [Contribuição e padrões](docs/development/CONTRIBUTING.md)
 - [Segurança](docs/security/SECURITY.md)
 - [ADR-001](docs/decisions/ADR-001-architecture.md)
+- [ADR-002 — domínio de membros](docs/decisions/ADR-002-member-domain.md)
 
 Use Conventional Commits. Alterações seguem branches de tarefa e Pull Requests, sem merge automático em `main`.
