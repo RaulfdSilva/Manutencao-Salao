@@ -1,6 +1,6 @@
 # ADR-002 — Domínio e casos de uso de membros
 
-- Status: adotado na entrega 01; política conservadora de consulta/escrita registrada para revisão
+- Status: adotado na entrega 01; política de consulta da decisão 4 parcialmente superada pelo [ADR-003](ADR-003-mvp-1-consolidation.md)
 - Data: 2026-10-24
 - Base: regras aprovadas na solicitação Implementação 01; complementa ADR-001
 
@@ -36,3 +36,7 @@ Reutilizar registros de domínio nas respostas seria mais curto, mas vazaria tel
 Vitest verifica invariantes, autorização local, projeções, transições, idempotência, contratos de efeitos, propagação de falhas e interleaving serializado no adaptador de testes. Esse adaptador existe apenas em `tests/` e simula rollback; não comprova atomicidade PostgreSQL, RLS, resolução de identidade, revogação de sessões, execução de tarefas ou preservação de histórico em um banco real.
 
 Antes da integração: escolher autenticação e procedimento inicial, implementar/testar transações e auditoria no servidor, definir atribuições futuras, paginação e conflitos de edição obsoleta, validar dados externos com Zod e aplicar privacidade no banco/API. As pendências de dependências do bootstrap continuam registradas em SECURITY.md. Nenhuma segurança de produção é declarada concluída.
+
+## Evolução após o PRD oficial do MVP 1.0
+
+O texto acima preserva a decisão histórica que orientou a entrega 01. O PRD oficial agora permite que membros com acesso autorizado consultem todos os membros ativos e seus papéis; telefone e cadastros inativos continuam restritos a administradores. Portanto, a restrição de consulta/listagem da decisão 4 não é a política futura do produto. A restrição de escrita permanece. O código e os testes da entrega 01 ainda reproduzem a política anterior e deverão ser adequados em tarefa funcional separada. O ADR-003 registra também offline obrigatório e o backend ainda em aberto.

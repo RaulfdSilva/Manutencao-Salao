@@ -14,7 +14,7 @@ Credenciais de sessão nativas deverão usar armazenamento seguro do sistema ope
 
 ## Autorização e isolamento
 
-Autoridade reside no servidor, não em telas ocultas ou claims controladas pelo cliente. Aplicar privilégio mínimo, verificação de pertencimento à congregação e autorização por operação, incluindo consultas, arquivos e funções. PostgreSQL/RLS deve impedir acesso cruzado entre congregações; testar leituras e escritas negadas. Chaves `service_role` e segredos administrativos permanecem exclusivamente no backend.
+Autoridade reside no servidor, não em telas ocultas ou claims controladas pelo cliente. Aplicar privilégio mínimo, verificação de pertencimento à congregação e autorização por operação, incluindo consultas, arquivos e funções. O backend escolhido deve impedir acesso a dados fora do escopo autorizado e testar leituras/escritas negadas. Se PostgreSQL/Supabase for adotado, avaliar RLS; chaves `service_role`, quando aplicáveis, e demais segredos administrativos permanecem exclusivamente no backend. O MVP atende uma única congregação; o isolamento é uma proteção de dados, não autorização para implementar suporte completo a várias congregações.
 
 Dados pessoais devem ser minimizados, acessíveis apenas a quem necessita e protegidos em trânsito e armazenamento. Definir finalidade, retenção, remoção, auditoria e recuperação antes da produção. Evitar tokens e dados pessoais em telemetria. Importações e documentos exigem validação, limites e autorização; não confiar em arquivos do Hourglass como comandos ou identidades verificadas.
 
@@ -37,3 +37,13 @@ A aplicação verifica o cadastro atual do ator, restringe escritas a administra
 A proteção do último administrador exige transação serializada por congregação no servidor. O adaptador em memória e seus testes demonstram a orquestração, não segurança ou concorrência distribuída reais. Remoção de atribuições futuras, auditoria e mudança de estado precisarão compartilhar a mesma transação; um adaptador que ignore essas portas é incompleto. Dados históricos não podem ser apagados.
 
 Reativar só altera o estado do membro: não existe operação de dispositivos nestes casos de uso. O futuro módulo de autenticação deve continuar negando dispositivos explicitamente revogados e verificar a situação atual do membro em cada operação protegida. O primeiro administrador não pode ser criado por um endpoint público sem identidade; o procedimento inicial controlado será implementado separadamente. Permanecem pendentes testes de servidor, RLS, sessões e revogação.
+
+## Privacidade e offline no PRD oficial do MVP 1.0
+
+A política de produto permite a membros com acesso autorizado consultar membros ativos e seus papéis. Telefone e cadastros inativos permanecem exclusivos de administradores ativos. A implementação 01 ainda é mais restritiva na consulta; sua adequação não foi realizada nesta consolidação documental. A listagem pública da equipe no aplicativo nunca significa acesso anônimo ou permissão para dispositivos revogados.
+
+O aplicativo não registra presença, ausência ou frequência individual e não gera rankings ou avaliações. Disponibilidade serve ao planejamento; autoria de alterações e auditoria técnica não comprovam comparecimento e não podem ser reutilizadas para fiscalização. Definir minimização, retenção e acesso a esses registros antes da produção.
+
+Offline exige avaliar proteção do banco/cache local, filas e fotos, incluindo acesso ao dispositivo, armazenamento, descarte e dados pessoais. Essas tecnologias e políticas ainda não foram escolhidas. Um dispositivo desconectado não recebe uma revogação nova instantaneamente. O servidor deve revalidar sessão, dispositivo, membro e permissão da operação ao sincronizar; negar uma operação não pode ser tratado silenciosamente como envio bem-sucedido. A apresentação e a recuperação de alterações recusadas precisam de definição técnica.
+
+A central de avisos permanece disponível como canal mesmo sem permissão push; isso não garante que um dispositivo offline receba avisos novos imediatamente. Fotos, conteúdo de problemas e notificações precisam de autorização e limites a definir. Primeira ativação exige internet. Os estados de conflito e a sincronização colaborativa do PRD são requisitos, não garantias já entregues.
