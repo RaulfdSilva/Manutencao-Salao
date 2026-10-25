@@ -1,4 +1,4 @@
-import { Member } from '../../domain/members/Member';
+import { assertValidMemberVersion, Member } from '../../domain/members/Member';
 import type { MemberProfile, MemberRole } from '../../domain/members/Member';
 import type {
   MemberActor,
@@ -43,6 +43,7 @@ function projectMember(member: Member, actor: Member): MemberView {
     name: member.name,
     role: member.role,
     status: member.status,
+    version: member.version,
   };
   return actor.isActiveAdministrator ? { ...view, phone: member.phone } : view;
 }
@@ -79,13 +80,12 @@ export class MemberUseCases {
       actor.congregationId,
       async (tx) => {
         const requester = await requireActor(tx, actor);
-        if (!requester.isActiveAdministrator && requester.id !== memberId) {
-          throw new MemberOperationError('FORBIDDEN');
+        const member = await requireMember(tx, actor.congregationId, memberId);
+        if (!requester.isActiveAdministrator && member.status !== 'active') {
+          // Do not disclose whether an inaccessible member exists.
+          throw new MemberOperationError('MEMBER_NOT_FOUND');
         }
-        return projectMember(
-          await requireMember(tx, actor.congregationId, memberId),
-          requester,
-        );
+        return projectMember(member, requester);
       },
     );
   }
@@ -95,10 +95,12 @@ export class MemberUseCases {
       actor.congregationId,
       async (tx) => {
         const requester = await requireActor(tx, actor);
-        requireAdministrator(requester);
-        return (await tx.members.list(actor.congregationId)).map((member) =>
-          projectMember(member, requester),
-        );
+        return (await tx.members.list(actor.congregationId))
+          .filter(
+            (member) =>
+              requester.isActiveAdministrator || member.status === 'active',
+          )
+          .map((member) => projectMember(member, requester));
       },
     );
   }
@@ -107,9 +109,14 @@ export class MemberUseCases {
     actor: MemberActor,
     memberId: string,
     input: MemberProfile,
+    expectedVersion: number,
   ): Promise<MemberView> {
-    return this.change(actor, memberId, 'profile_updated', (member) =>
-      member.editProfile(input),
+    return this.change(
+      actor,
+      memberId,
+      expectedVersion,
+      'profile_updated',
+      (member) => member.editProfile(input),
     );
   }
 
@@ -117,27 +124,49 @@ export class MemberUseCases {
     actor: MemberActor,
     memberId: string,
     role: MemberRole,
+    expectedVersion: number,
   ): Promise<MemberView> {
-    return this.change(actor, memberId, 'role_changed', (member) =>
-      member.changeRole(role),
+    return this.change(
+      actor,
+      memberId,
+      expectedVersion,
+      'role_changed',
+      (member) => member.changeRole(role),
     );
   }
 
-  deactivate(actor: MemberActor, memberId: string): Promise<MemberView> {
-    return this.change(actor, memberId, 'deactivated', (member) =>
-      member.deactivate(),
+  deactivate(
+    actor: MemberActor,
+    memberId: string,
+    expectedVersion: number,
+  ): Promise<MemberView> {
+    return this.change(
+      actor,
+      memberId,
+      expectedVersion,
+      'deactivated',
+      (member) => member.deactivate(),
     );
   }
 
-  reactivate(actor: MemberActor, memberId: string): Promise<MemberView> {
-    return this.change(actor, memberId, 'reactivated', (member) =>
-      member.reactivate(),
+  reactivate(
+    actor: MemberActor,
+    memberId: string,
+    expectedVersion: number,
+  ): Promise<MemberView> {
+    return this.change(
+      actor,
+      memberId,
+      expectedVersion,
+      'reactivated',
+      (member) => member.reactivate(),
     );
   }
 
   private change(
     actor: MemberActor,
     memberId: string,
+    expectedVersion: number,
     action: Exclude<MemberAuditAction, 'created'>,
     transform: (member: Member) => Member,
   ): Promise<MemberView> {
@@ -147,6 +176,10 @@ export class MemberUseCases {
         const requester = await requireActor(tx, actor);
         requireAdministrator(requester);
         const before = await requireMember(tx, actor.congregationId, memberId);
+        assertValidMemberVersion(expectedVersion);
+        if (before.version !== expectedVersion) {
+          throw new MemberOperationError('MEMBER_VERSION_CONFLICT');
+        }
         const after = transform(before);
         if (
           before.isActiveAdministrator &&
@@ -156,16 +189,13 @@ export class MemberUseCases {
         ) {
           throw new MemberOperationError('LAST_ACTIVE_ADMINISTRATOR');
         }
-        if (
-          before.name === after.name &&
-          before.phone === after.phone &&
-          before.role === after.role &&
-          before.status === after.status
-        ) {
+        if (after === before) {
           return projectMember(before, requester);
         }
         const occurredAt = this.dependencies.clock.now();
-        await tx.members.save(after);
+        if (!(await tx.members.saveIfVersion(after, expectedVersion))) {
+          throw new MemberOperationError('MEMBER_VERSION_CONFLICT');
+        }
         if (before.status === 'active' && after.status === 'inactive') {
           await tx.futureAssignments.releaseForMember({
             congregationId: actor.congregationId,
@@ -198,8 +228,10 @@ export class MemberUseCases {
       memberId: after.id,
       action,
       occurredAt,
-      before: before ? { role: before.role, status: before.status } : null,
-      after: { role: after.role, status: after.status },
+      before: before
+        ? { role: before.role, status: before.status, version: before.version }
+        : null,
+      after: { role: after.role, status: after.status, version: after.version },
     });
   }
 }

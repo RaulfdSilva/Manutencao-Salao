@@ -14,6 +14,7 @@ const record: MemberRecord = {
   phone: '+55 11 99999-0000',
   role: 'member',
   status: 'active',
+  version: 1,
 };
 
 describe('Member', () => {
@@ -21,6 +22,7 @@ describe('Member', () => {
     const member = Member.create({ ...record, name: '  João  ' });
     expect(member.name).toBe('João');
     expect(member.status).toBe('active');
+    expect(member.version).toBe(1);
   });
 
   it.each(['', ' ', '\n\t'])('rejects an empty name: %j', (name) => {
@@ -102,6 +104,55 @@ describe('Member', () => {
     ).toBeNull();
     expect(() => member.editProfile({ name: ' ' })).toThrowError(
       new MemberError('INVALID_NAME'),
+    );
+  });
+
+  it('increments the version exactly once for each effective change', () => {
+    const original = Member.restore(record);
+    const edited = original.editProfile({ name: 'Maria', phone: null });
+    const promoted = edited.changeRole('administrator');
+    const inactive = promoted.deactivate();
+    const active = inactive.reactivate();
+    expect(
+      [original, edited, promoted, inactive, active].map((m) => m.version),
+    ).toEqual([1, 2, 3, 4, 5]);
+    expect(original.version).toBe(1);
+  });
+
+  it('does not advance the version for normalized no-ops', () => {
+    const member = Member.restore(record);
+    expect(member.editProfile({ name: ' Ana Silva ' })).toBe(member);
+    expect(member.changeRole('member')).toBe(member);
+    expect(member.reactivate()).toBe(member);
+    const inactive = member.deactivate();
+    expect(inactive.deactivate()).toBe(inactive);
+    expect(inactive.version).toBe(2);
+  });
+
+  it.each([
+    0,
+    -1,
+    1.5,
+    NaN,
+    Infinity,
+    Number.MAX_SAFE_INTEGER + 1,
+    undefined,
+    '1',
+  ])('rejects an invalid restored version: %s', (version) => {
+    expect(() =>
+      Member.restore({ ...record, version: version as number }),
+    ).toThrowError(new MemberError('INVALID_VERSION'));
+  });
+
+  it('preserves a restored version and rejects overflow instead of losing precision', () => {
+    const member = Member.restore({
+      ...record,
+      version: Number.MAX_SAFE_INTEGER,
+    });
+    expect(member.version).toBe(Number.MAX_SAFE_INTEGER);
+    expect(member.reactivate()).toBe(member);
+    expect(() => member.deactivate()).toThrowError(
+      new MemberError('INVALID_VERSION'),
     );
   });
 });

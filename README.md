@@ -1,10 +1,10 @@
 # Manutenção Salão
 
-Aplicativo móvel para organizar manutenções de uma única congregação, com escopo inicial em equipamentos de áudio. O MVP 1.0 exige preenchimento colaborativo offline, sem controle de presença, frequência ou avaliação dos voluntários. **Estágio: bootstrap e entrega 01 do domínio de membros, sem integração de produção.** A única tela é uma indicação estática de inicialização.
+Aplicativo móvel para organizar manutenções de uma única congregação, com escopo inicial em equipamentos de áudio. O MVP 1.0 exige preenchimento colaborativo offline, sem controle de presença, frequência ou avaliação dos voluntários. **Estágio: bootstrap e entrega 02 do domínio de membros, sem integração de produção.** A única tela é uma indicação estática de inicialização.
 
 ## Requisitos e implementação
 
-O [PRD oficial](docs/requirements/PRD.md) define o produto pretendido; esta branch contém apenas a base e o domínio de membros. A consulta da equipe ativa por todos os membros ainda exige alteração dos casos de uso e testes, que hoje adotam acesso mais restrito. Offline, calendário, checklists, pendências e notificações permanecem não implementados. Tema escuro e quatro abas são requisitos futuros, não o estado da tela inicial.
+O [PRD oficial](docs/requirements/PRD.md) define o produto pretendido; esta branch contém apenas a base e o domínio de membros. A entrega 02 permite consulta da equipe ativa por membros ativos autorizados, omitindo telefone e cadastros inativos para não administradores. Alterações de perfil, papel e situação exigem a versão esperada, com erro explícito de conflito e contrato de gravação condicional. Offline, calendário, checklists, pendências e notificações permanecem não implementados. Tema escuro e quatro abas são requisitos futuros, não o estado da tela inicial.
 
 O backend e a autenticação segura ainda precisam de decisão. Suporte completo a múltiplas congregações e áreas além do áudio estão fora do MVP. As referências a congregação nos contratos existentes não significam suporte completo a várias congregações.
 
@@ -59,5 +59,6 @@ A organização em camadas foi mantida; domínio e aplicação contêm as regras
 - [ADR-001](docs/decisions/ADR-001-architecture.md)
 - [ADR-002 — domínio de membros](docs/decisions/ADR-002-member-domain.md)
 - [ADR-003 — consolidação do MVP 1.0](docs/decisions/ADR-003-mvp-1-consolidation.md)
+- [ADR-004 — consulta da equipe e concorrência otimista](docs/decisions/ADR-004-member-access-concurrency.md)
 
 Use Conventional Commits. Alterações seguem branches de tarefa e Pull Requests, sem merge automático em `main`.

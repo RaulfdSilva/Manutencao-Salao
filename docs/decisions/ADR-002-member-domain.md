@@ -1,6 +1,6 @@
 # ADR-002 — Domínio e casos de uso de membros
 
-- Status: adotado na entrega 01; política de consulta da decisão 4 parcialmente superada pelo [ADR-003](ADR-003-mvp-1-consolidation.md)
+- Status: adotado na entrega 01; consulta parcialmente superada pelo [ADR-003](ADR-003-mvp-1-consolidation.md) e implementada com versionamento na entrega 02, [ADR-004](ADR-004-member-access-concurrency.md)
 - Data: 2026-10-24
 - Base: regras aprovadas na solicitação Implementação 01; complementa ADR-001
 
@@ -39,4 +39,4 @@ Antes da integração: escolher autenticação e procedimento inicial, implement
 
 ## Evolução após o PRD oficial do MVP 1.0
 
-O texto acima preserva a decisão histórica que orientou a entrega 01. O PRD oficial agora permite que membros com acesso autorizado consultem todos os membros ativos e seus papéis; telefone e cadastros inativos continuam restritos a administradores. Portanto, a restrição de consulta/listagem da decisão 4 não é a política futura do produto. A restrição de escrita permanece. O código e os testes da entrega 01 ainda reproduzem a política anterior e deverão ser adequados em tarefa funcional separada. O ADR-003 registra também offline obrigatório e o backend ainda em aberto.
+O texto acima preserva a decisão histórica que orientou a entrega 01. O PRD oficial agora permite que membros com acesso autorizado consultem todos os membros ativos e seus papéis; telefone e cadastros inativos continuam restritos a administradores. Portanto, a restrição de consulta/listagem da decisão 4 não é a política futura do produto. A restrição de escrita permanece. Na consolidação, o código e os testes da entrega 01 ainda reproduziam a política anterior. A entrega 02 fez a adequação de consulta e introduziu controle de versão; ver ADR-004. As decisões numeradas acima permanecem como registro histórico da entrega 01, inclusive a semântica original de no-ops, detalhada novamente no ADR-004. O ADR-003 registra também offline obrigatório e o backend ainda em aberto.

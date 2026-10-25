@@ -40,10 +40,16 @@ Reativar só altera o estado do membro: não existe operação de dispositivos n
 
 ## Privacidade e offline no PRD oficial do MVP 1.0
 
-A política de produto permite a membros com acesso autorizado consultar membros ativos e seus papéis. Telefone e cadastros inativos permanecem exclusivos de administradores ativos. A implementação 01 ainda é mais restritiva na consulta; sua adequação não foi realizada nesta consolidação documental. A listagem pública da equipe no aplicativo nunca significa acesso anônimo ou permissão para dispositivos revogados.
+A política de produto permite a membros com acesso autorizado consultar membros ativos e seus papéis. Telefone e cadastros inativos permanecem exclusivos de administradores ativos. A entrega 02 adequou a consulta no domínio/aplicação: solicitantes ativos consultam ativos; somente administradores ativos consultam inativos e telefone. A identidade ainda depende de um futuro servidor. A listagem pública da equipe no aplicativo nunca significa acesso anônimo ou permissão para dispositivos revogados.
 
 O aplicativo não registra presença, ausência ou frequência individual e não gera rankings ou avaliações. Disponibilidade serve ao planejamento; autoria de alterações e auditoria técnica não comprovam comparecimento e não podem ser reutilizadas para fiscalização. Definir minimização, retenção e acesso a esses registros antes da produção.
 
 Offline exige avaliar proteção do banco/cache local, filas e fotos, incluindo acesso ao dispositivo, armazenamento, descarte e dados pessoais. Essas tecnologias e políticas ainda não foram escolhidas. Um dispositivo desconectado não recebe uma revogação nova instantaneamente. O servidor deve revalidar sessão, dispositivo, membro e permissão da operação ao sincronizar; negar uma operação não pode ser tratado silenciosamente como envio bem-sucedido. A apresentação e a recuperação de alterações recusadas precisam de definição técnica.
 
 A central de avisos permanece disponível como canal mesmo sem permissão push; isso não garante que um dispositivo offline receba avisos novos imediatamente. Fotos, conteúdo de problemas e notificações precisam de autorização e limites a definir. Primeira ativação exige internet. Os estados de conflito e a sincronização colaborativa do PRD são requisitos, não garantias já entregues.
+
+## Edição concorrente — entrega 02
+
+Toda alteração de perfil, papel ou situação exige versão esperada. A aplicação rejeita versões obsoletas e o contrato `saveIfVersion` exige comparação/gravação atômicas no armazenamento, sem produzir auditoria ou retirada em caso de conflito. Versão não é credencial: autorização é verificada primeiro e continua dependendo de identidade confiável no servidor. O futuro transporte deve tratar erros sem vazar informação sobre cadastros inacessíveis.
+
+O repositório não oferece gravação irrestrita; um adaptador que apenas leia a versão e depois grave sem condição não cumpre o contrato. As garantias do último administrador, revogação de acesso, retirada de designações e rollback real ainda exigem implementação e testes no servidor/banco. O adaptador de testes e sua fila em memória não demonstram segurança em produção. Não resolver conflito sobrescrevendo automaticamente os dados recentes com um formulário antigo.
