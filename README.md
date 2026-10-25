@@ -1,10 +1,10 @@
 # Manutenção Salão
 
-Aplicativo móvel para organizar manutenções de uma única congregação, com escopo inicial em equipamentos de áudio. O MVP 1.0 exige preenchimento colaborativo offline, sem controle de presença, frequência ou avaliação dos voluntários. **Estágio: bootstrap e entrega 02 do domínio de membros, sem integração de produção.** A única tela é uma indicação estática de inicialização.
+Aplicativo móvel para organizar manutenções de uma única congregação, com escopo inicial em equipamentos de áudio. O MVP 1.0 exige preenchimento colaborativo offline, sem controle de presença, frequência ou avaliação dos voluntários. **Estágio: bootstrap, entregas 01/02 de membros e entrega 03 do planejamento de manutenções, sem integração de produção.** A única tela é uma indicação estática de inicialização.
 
 ## Requisitos e implementação
 
-O [PRD oficial](docs/requirements/PRD.md) define o produto pretendido; esta branch contém apenas a base e o domínio de membros. A entrega 02 permite consulta da equipe ativa por membros ativos autorizados, omitindo telefone e cadastros inativos para não administradores. Alterações de perfil, papel e situação exigem a versão esperada, com erro explícito de conflito e contrato de gravação condicional. Offline, calendário, checklists, pendências e notificações permanecem não implementados. Tema escuro e quatro abas são requisitos futuros, não o estado da tela inicial.
+O [PRD oficial](docs/requirements/PRD.md) define o produto pretendido; esta branch contém apenas a base e o domínio de membros. A entrega 02 permite consulta da equipe ativa por membros ativos autorizados, omitindo telefone e cadastros inativos para não administradores. Alterações de perfil, papel e situação exigem a versão esperada, com erro explícito de conflito e contrato de gravação condicional. O domínio de recorrências/ocorrências de manutenção está implementado com contratos de eventos e persistência; calendário visual, offline, checklists, pendências e envio de notificações permanecem não implementados. Tema escuro e quatro abas são requisitos futuros, não o estado da tela inicial.
 
 O backend e a autenticação segura ainda precisam de decisão. Suporte completo a múltiplas congregações e áreas além do áudio estão fora do MVP. As referências a congregação nos contratos existentes não significam suporte completo a várias congregações.
 
@@ -32,22 +32,22 @@ npx expo install --check
 npm run export:web
 ```
 
-`npm run format` aplica formatação; `npm run test:watch` permite desenvolvimento contínuo. Vitest usa Node para testes TypeScript. Os testes de bootstrap verificam o runner e a configuração Expo com Zod; os testes de membros verificam domínio e casos de uso. Não há testes de UI ou banco. A CI executa as verificações acima; build nativo e testes em dispositivo ficam para um ambiente com SDKs nativos.
+`npm run format` aplica formatação; `npm run test:watch` permite desenvolvimento contínuo. Vitest usa Node para testes TypeScript. Os testes de bootstrap verificam o runner e a configuração Expo com Zod; os testes de membros e manutenções verificam domínio e casos de uso, incluindo geração delimitada, permissões, eventos e concorrência. Não há testes de UI ou banco. A CI executa as verificações acima; build nativo e testes em dispositivo ficam para um ambiente com SDKs nativos.
 
 ## Estrutura
 
 ```text
 app/                       rotas e layout Expo Router
-src/domain/                entidades, regras e contratos de membros
-src/application/           casos de uso e portas de membros
+src/domain/                entidades, regras e contratos de membros/manutenções
+src/application/           casos de uso e portas de membros/manutenções
 src/infrastructure/        adaptadores e integrações futuras
 src/presentation/          componentes de interface
-tests/                     testes de infraestrutura e membros
+tests/                     testes de infraestrutura, membros e manutenções
 docs/                     requisitos, arquitetura, segurança e decisões
 .github/workflows/ci.yml    verificações automatizadas
 ```
 
-A organização em camadas foi mantida; domínio e aplicação contêm as regras e os contratos de membros, sem adaptadores de produção. O domínio permanece independente das tecnologias externas.
+A organização em camadas foi mantida; domínio e aplicação contêm as regras e os contratos de membros e planejamento de manutenções, sem adaptadores de produção. O domínio permanece independente das tecnologias externas.
 
 ## Documentação
 
@@ -60,5 +60,6 @@ A organização em camadas foi mantida; domínio e aplicação contêm as regras
 - [ADR-002 — domínio de membros](docs/decisions/ADR-002-member-domain.md)
 - [ADR-003 — consolidação do MVP 1.0](docs/decisions/ADR-003-mvp-1-consolidation.md)
 - [ADR-004 — consulta da equipe e concorrência otimista](docs/decisions/ADR-004-member-access-concurrency.md)
+- [ADR-005 — planejamento de manutenções](docs/decisions/ADR-005-maintenance-planning.md)
 
 Use Conventional Commits. Alterações seguem branches de tarefa e Pull Requests, sem merge automático em `main`.

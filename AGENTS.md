@@ -27,8 +27,12 @@ Preservar trabalho local, não reescrever histórico, não forçar push nem faze
 
 O MVP atende uma congregação e somente áudio. Não introduzir controle de presença, ausência, frequência, rankings, avaliações individuais, chamados avulsos, estado de reparo em andamento ou restauração de ocorrência cancelada. Auditoria técnica e respostas de disponibilidade não podem ser convertidas em fiscalização de voluntários.
 
-Offline é obrigatório no MVP: considerar operações individuais, deduplicação, preservação de problemas e revisão de conflitos desde a modelagem, sem escolher bibliotecas ou backend por antecipação. Não prometer revogação instantânea em dispositivos desconectados; o servidor revalida permissões ao sincronizar. Não inventar itens oficiais de checklist nem o formato de exportação do Hourglass. A antiga regra de primeiro/terceiro fim de semana precisa de conciliação antes de implementar recorrências.
+Offline é obrigatório no MVP: considerar operações individuais, deduplicação, preservação de problemas e revisão de conflitos desde a modelagem, sem escolher bibliotecas ou backend por antecipação. Não prometer revogação instantânea em dispositivos desconectados; o servidor revalida permissões ao sincronizar. Não inventar itens oficiais de checklist nem o formato de exportação do Hourglass. A Implementação 03 confirmou primeiro/terceiro fins de semana com sábado como referência; domingo dia 1 pertence ao mês anterior. Ver ADR-005, incluindo configuração de sábado/domingo, política de mês curto e limite de geração.
 
 ## Contrato de membros — entrega 02
 
 Consultar ADR-004. Manter `version` nos registros restaurados e nas projeções; não atribuir uma versão padrão a registros legados sem decisão de migração. Todas as escritas existentes exigem `expectedVersion`, inclusive mudanças de papel e situação. Não reintroduzir `save` irrestrito: `saveIfVersion` deve comparar e gravar atomicamente no armazenamento. A verificação inicial da aplicação e a fila do adaptador de testes não substituem essa garantia nem a proteção concorrente do último administrador.
+
+## Contrato de manutenções — entrega 03
+
+Ler ADR-005. Regra recorrente e ocorrência são agregados distintos; não recalcular identidade pela data remarcada. Geração exige intervalo limitado, unicidade por congregação/regra/data original e retorno do existente sem sobrescrever cancelamentos/exceções. Mudanças exigem versão esperada e CAS; eventos de auditoria/outbox compartilham a transação. Não tratar `MemberActor` como autenticação. Horário civil com fuso não equivale a instante UTC; a resolução de DST ainda pertence ao adaptador futuro. Não implementar envio de avisos, respostas de disponibilidade ou Hourglass a partir dos contratos sem nova autorização.
