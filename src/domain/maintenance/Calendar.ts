@@ -15,6 +15,8 @@ export interface DateRange {
 export interface RecurrenceSlot {
   readonly date: string;
   readonly weekendStart: string | null;
+  readonly cycleKey: string;
+  readonly cycleDate: string;
 }
 
 function utcDate(year: number, month: number, day: number): Date {
@@ -97,6 +99,37 @@ function monthIndex(date: Date): number {
   return date.getUTCFullYear() * 12 + date.getUTCMonth();
 }
 
+/** Canonical cycle identity, independent of execution day, revision or rescheduling. */
+export function recurrenceCycle(
+  category: MaintenanceCategory,
+  slotDate: string,
+  weekendStart: string | null,
+): { readonly cycleKey: string; readonly cycleDate: string } {
+  assertCategory(category);
+  const date = parseDate(slotDate);
+  if (category !== 'fortnightly') {
+    if (weekendStart !== null) throw new MaintenanceError('INVALID_CYCLE');
+    return Object.freeze({
+      cycleKey: `month:${slotDate.slice(0, 7)}`,
+      cycleDate: `${slotDate.slice(0, 7)}-01`,
+    });
+  }
+  if (weekendStart === null) throw new MaintenanceError('INVALID_CYCLE');
+  const saturday = parseDate(weekendStart);
+  const ordinal = Math.floor((saturday.getUTCDate() - 1) / 7) + 1;
+  const offset = (date.getTime() - saturday.getTime()) / dayMilliseconds;
+  if (
+    saturday.getUTCDay() !== 6 ||
+    ![1, 3].includes(ordinal) ||
+    ![0, 1].includes(offset)
+  )
+    throw new MaintenanceError('INVALID_CYCLE');
+  return Object.freeze({
+    cycleKey: `weekend:${weekendStart}`,
+    cycleDate: weekendStart,
+  });
+}
+
 /** Pure bounded generation, inclusive range; no dependence on system clock or host time zone. */
 export function generateRecurrenceSlots(
   input: {
@@ -125,7 +158,14 @@ export function generateRecurrenceSlots(
       date >= input.startsOn &&
       (input.endsOn === null || date <= input.endsOn)
     ) {
-      slots.set(date, Object.freeze({ date, weekendStart }));
+      slots.set(
+        date,
+        Object.freeze({
+          date,
+          weekendStart,
+          ...recurrenceCycle(input.category, date, weekendStart),
+        }),
+      );
     }
   };
   // Include neighboring months before filtering the exact civil-date range.

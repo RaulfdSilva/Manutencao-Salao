@@ -75,6 +75,8 @@ O calendário combinará:
 
 O administrador define e aprova a programação. Depois disso, convites e lembretes são executados automaticamente.
 
+**Revisão segura de séries — política aprovada após a auditoria da Implementação 03:** revisões exigem início de vigência explícito. Ocorrências já materializadas, inclusive futuras, canceladas ou remarcadas, permanecem intactas e não podem ser recriadas pela mesma regra para o mesmo ciclo. Ciclos ainda não materializados seguem a configuração aplicável à sua vigência. Alterações individuais usam os casos de uso da ocorrência. Essa proteção não impede manutenções avulsas ou de regras distintas na mesma data. A identidade civil do ciclo e a seleção de vigência estão definidas no ADR-005.
+
 ### Alteração de data
 
 Ao remarcar uma manutenção, o sistema deverá:
@@ -422,9 +424,9 @@ Critérios unitários: equipe ativa visível aos papéis autorizados; telefone/i
 
 ## Entrega 03 — planejamento de manutenções
 
-Implementados domínio, contratos e casos de uso para aprovar/revisar regras recorrentes, gerar ocorrências por intervalo, criar datas específicas, consultar programação/elegibilidade, ajustar configurações individuais, designar equipe, reagendar e cancelar. Categoria/horário/fuso/padrões são configuração da regra; quantidades e responsáveis podem ser ajustados por ocorrência. Não há geração infinita ou alteração automática de ocorrências existentes ao revisar uma regra.
+Implementados domínio, contratos e casos de uso para aprovar/revisar regras recorrentes, gerar ocorrências por intervalo, criar datas específicas, consultar programação/elegibilidade, ajustar configurações individuais, designar equipe, reagendar e cancelar. Categoria/horário/fuso/padrões são configuração da regra; quantidades e responsáveis podem ser ajustados por ocorrência. Não há geração infinita ou alteração automática de ocorrências existentes ao revisar uma regra. Revisões guardam configuração completa e vigência explícita, preservando categoria e ancoragem. O calendário seleciona a revisão pela referência civil de cada ciclo, inclusive para geração de períodos anteriores; uma vigência no meio do ciclo vale para o próximo ciclo aplicável. Ver ADR-005.
 
-A geração é determinística por regra/intervalo e exige no máximo 366 dias inclusivos por lote. Slots originais têm unicidade por congregação/regra/data original, que deve ser preservada no armazenamento real. Repetição retorna o existente, mesmo remarcado ou cancelado. Regras mensais/trimestrais/semestrais usam meses civis ancorados no mês de início, com escolha explícita entre omitir mês sem o dia e usar seu último dia.
+A geração é determinística por regra/intervalo e exige no máximo 366 dias inclusivos por lote. Ciclos têm unicidade por congregação/regra/`cycleKey`, que deve ser preservada no armazenamento real. A chave independe da data de execução: sábado de referência nas quinzenais e mês programado nas demais. Repetição retorna o existente, mesmo remarcado ou cancelado. Regras mensais/trimestrais/semestrais usam meses civis ancorados no mês de início, com escolha explícita entre omitir mês sem o dia e usar seu último dia.
 
 Administradores ativos aprovam/revisam regras e criam/geram/configuram/reagendam/cancelam ocorrências. Administradores ou responsáveis ativos explicitamente autorizados organizam equipe designada. Membros ativos consultam e verificam elegibilidade, sem que isso registre presença ou resposta de disponibilidade. Mínimo/desejado são referências opcionais não negativas; mínimo maior que desejado é configuração inválida, mas equipe maior que o desejado é permitida. Quantidade insuficiente não cancela a ocorrência.
 
