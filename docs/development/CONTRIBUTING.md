@@ -1,6 +1,6 @@
 # Contribuição
 
-Leia README, PRD, ARCHITECTURE, SECURITY e ADRs antes de alterar o projeto. Use a versão de Node de `.nvmrc`, `npm ci` e o lockfile versionado; atualizações de dependências devem ser deliberadas. Instale dependências nativas com `npx expo install` para compatibilidade com o SDK. Não misture gerenciadores de pacotes.
+Leia README, o PRD oficial em `docs/requirements/PRD.md`, ARCHITECTURE, SECURITY e ADRs antes de alterar o projeto. O diretório de requisitos arquivados é histórico, não uma fonte concorrente. ADRs parcialmente superados devem ser lidos junto do ADR que os substitui. Use a versão de Node de `.nvmrc`, `npm ci` e o lockfile versionado; atualizações de dependências devem ser deliberadas. Instale dependências nativas com `npx expo install` para compatibilidade com o SDK. Não misture gerenciadores de pacotes.
 
 ## Fluxo de trabalho
 
@@ -34,3 +34,9 @@ Para formatação use `npm run format`. Testes não executados devem ser reporta
 - Comentários explicam decisões não óbvias, não repetem o código.
 
 Mudanças de comportamento exigem atualização da documentação e testes. Dependências novas precisam de justificativa e avaliação de compatibilidade, manutenção e segurança. Nunca registrar credenciais ou dados pessoais nos testes, logs ou commits.
+
+## Entregas alinhadas ao MVP 1.0
+
+Separar requisitos pretendidos, comportamento implementado e verificações executadas. Uma atualização documental não muda permissões ou testes existentes. A entrega 02 adequou a consulta da equipe; preservar os testes de telefone, inativos e restrições administrativas. Toda mutação de membro deve receber a versão lida pelo solicitante e usar a escrita condicional do repositório. Não recuperar conflito automaticamente reenviando os mesmos dados com uma versão nova.
+
+Não acrescentar funcionalidades fora do PRD, métricas de frequência ou fiscalização. Planejar cenários offline, repetição de operações, conflitos e revalidação de autorização nas entregas pertinentes. O backend continua a definir; alterações estruturais exigem ADR antes de introduzir dependências. Checklist oficial e Hourglass precisam de fontes reais, sem conteúdo ou formatos inventados.

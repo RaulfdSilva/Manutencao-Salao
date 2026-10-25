@@ -1,6 +1,6 @@
 # Arquitetura
 
-Aplicativo modular com Expo Router e TypeScript strict. Nesta etapa há uma rota estática e a estrutura mínima para evolução; não existem casos de uso, persistência ou autenticação.
+Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática e, desde as entregas 01/02, domínio e casos de uso de membros. Não existem adaptadores de persistência, autenticação ou telas de membros.
 
 ## Direção das dependências
 
@@ -18,12 +18,41 @@ Quando houver necessidade real, um ponto de composição na borda instanciará a
 
 O ESLint aplica restrições de importação por camada e detecta ciclos. O compilador garante strict, propriedades opcionais exatas e acesso indexado verificado. Importações externas são validadas na fronteira usando Zod, com erros explícitos e conversão para tipos internos; não usar `any` para contornar contratos.
 
-## Preparação para Supabase/PostgreSQL
+## Backend e persistência — decisão pendente
 
-Supabase é a integração planejada, não instalada nem necessária para iniciar. Futuramente seus adaptadores ficarão em Infrastructure, com contratos consumidos por Application. Migrações serão versionadas quando o modelo for aprovado. PostgreSQL deverá aplicar políticas de isolamento por congregação e autorização no servidor (RLS e funções/serviços com privilégios mínimos). A chave pública do cliente não substitui autorização.
+O PRD oficial do MVP 1.0 mantém a tecnologia do backend em aberto. Supabase/PostgreSQL foi uma alternativa considerada no bootstrap; não é uma decisão definitiva e não está instalado. Qualquer adaptador futuro ficará em Infrastructure, consumindo contratos internos sem expor tipos do fornecedor ao domínio. Não criar SDK, banco ou migração só por existir `.env.example` com nomes Supabase.
 
-Autenticação sem e-mail requer investigação específica: avaliar recursos suportados de Supabase Auth e/ou um serviço confiável de provisionamento e troca de tokens. Não pressupor que uma chave pública implemente autenticação ou que um token de ativação seja uma sessão. Ver SECURITY.
+A escolha deverá atender autorização no servidor, revogação de sessões/dispositivos, persistência central, transações, sincronização, fotos e agendamento de notificações sem depender do aplicativo aberto. Se PostgreSQL/Supabase for escolhido, avaliar RLS e funções com privilégios mínimos; outras soluções deverão demonstrar garantias equivalentes. O MVP não inclui suporte completo a várias congregações; manter o escopo dos dados nos contratos existentes não autoriza construir essa funcionalidade.
+
+Autenticação sem e-mail e senha e ativação por token temporário de uso único continuam requisitos, com mecanismo técnico a validar. Cadastro, identidade autenticada e dispositivo permanecem separados. Nenhuma chave pública ou papel fornecido pelo cliente substitui uma sessão validada. Ver SECURITY e ADR-003.
 
 ## Testes e evolução
 
 Vitest em Node testa TypeScript puro e integração de tooling. Futuras regras exigem testes de comportamento e falhas. Testes de componentes e ponta a ponta serão escolhidos quando existirem fluxos reais, sem simular segurança inexistente. Exportação web valida Metro/Router; testes nativos continuam necessários antes de distribuição. Novas dependências e decisões estruturais devem ser justificadas por necessidade e ADR quando relevante.
+
+## Módulo de membros — entregas 01 e 02
+
+`src/domain/members` contém `Member` imutável, tipos, erros e contrato de repositório sem exclusão. `src/application/members` contém sete casos de uso reunidos em `MemberUseCases`, erros e portas de transação, auditoria, atribuições futuras, relógio e identificadores. Não há abstrações genéricas, contêiner de injeção ou serviços globais. Testes ficam em `tests/members`, permitindo que o domínio continue sem imports de bibliotecas de testes.
+
+A unidade de trabalho mantém a orquestração independente de banco e tarefas. Ela exige atomicidade e serialização no servidor; o adaptador em memória existe somente em testes e não constitui autenticação ou implementação de produção. Projeções de saída omitem telefone de solicitantes que não sejam administradores ativos, inclusive após autodesativação ou rebaixamento. Instâncias `Member` e `toRecord()` são objetos internos com telefone; não devem ser serializados diretamente para respostas públicas. Ver ADR-002.
+
+## Diretrizes do MVP 1.0 — ainda não implementadas
+
+A divisão em camadas permanece. Persistência local e sincronização pertencem a adaptadores, enquanto deduplicação, estados válidos e regras de conflito precisam de contratos explícitos. As opções de banco local, protocolo e bibliotecas não foram escolhidas.
+
+- Representar alterações por operação/tarefa, sem substituir o checklist inteiro. Combinar alterações independentes, deduplicar conclusões e preservar registros distintos de problemas. Resultados incompatíveis exigem revisão; não adotar silenciosamente a última cópia como vencedora.
+- Mostrar sincronizado, aguardando envio e conflito. Revalidar autorização no servidor no recebimento de operações offline. O tratamento de operações recusadas, fotos e encerramento concorrente ainda precisa ser detalhado, sem descartar trabalho silenciosamente.
+- Tratar disponibilidade e designação como planejamento, nunca presença ou avaliação. Resultados de tarefa e registros de problemas são distintos: um problema não desaparece quando a tarefa é concluída.
+- Modelar ocorrências separadamente da recorrência. Reagendamento invalida avisos antigos e recalcula futuros; cancelamento definitivo afeta a ocorrência e preserva o registro técnico, sem restauração no MVP.
+- Executar notificações no servidor com deduplicação, validação de atualidade, silêncio coletivo e exceção de prioridade conforme o PRD. Central interna e entrega push são conceitos separados; entrega imediata continua sujeita à conectividade e ao sistema operacional.
+- Manter a proteção do último administrador e a unidade de trabalho da entrega 01 como contratos. O backend escolhido deverá garantir atomicidade real entre desativação, retirada de designações e auditoria; uma fila offline do cliente não cumpre essa transação por si só.
+
+A entrega 02 implementa a política de consulta do PRD: solicitantes ativos podem consultar a equipe ativa; administradores também veem inativos e telefones. O filtro de situação ocorre antes da projeção e a propriedade de telefone é omitida para não administradores. A restrição de escrita não mudou. Sem sessão confiável resolvida no servidor, esses casos de uso não são uma API autenticada.
+
+## Concorrência otimista de membros — entrega 02
+
+`Member.version` é restaurada explicitamente, começa em 1 na criação e avança em cada alteração efetiva. Todas as mutações existentes exigem `expectedVersion`. A aplicação faz uma verificação inicial na unidade de trabalho para rejeitar requisições obsoletas; essa verificação sozinha não é a garantia de persistência.
+
+`MemberRepository.saveIfVersion` exige comparação e gravação atômicas no armazenamento, com escopo por identificador/congregação/versão e retorno indicativo de sucesso. Não há mais método de atualização irrestrita. O futuro adaptador deve usar escrita condicional e conferir o resultado (por exemplo, quantidade de linhas alteradas), sem separar leitura da comparação e gravação. Um falso gera conflito antes de executar efeitos. Auditoria inclui versões anterior/posterior, sem valores pessoais.
+
+O controle de versão por membro não impede duas desativações simultâneas de administradores diferentes. Portanto, a serialização e o bloqueio adequados ao conjunto de administradores da congregação continuam obrigatórios no servidor, junto da transação que inclui designações e auditoria. Os testes só exercitam o contrato em memória. Ver ADR-004 para no-ops, erros, alternativas e limites.
