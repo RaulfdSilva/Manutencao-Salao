@@ -3,7 +3,8 @@ export type MemberErrorCode =
   | 'INVALID_NAME'
   | 'INVALID_PHONE'
   | 'INVALID_ROLE'
-  | 'INVALID_STATUS';
+  | 'INVALID_STATUS'
+  | 'INVALID_VERSION';
 
 export class MemberError extends Error {
   override readonly name = 'MemberError';

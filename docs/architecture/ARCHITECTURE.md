@@ -1,6 +1,6 @@
 # Arquitetura
 
-Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática e, desde a entrega 01, domínio e casos de uso de membros. Não existem adaptadores de persistência, autenticação ou telas de membros.
+Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática e, desde as entregas 01/02, domínio e casos de uso de membros. Não existem adaptadores de persistência, autenticação ou telas de membros.
 
 ## Direção das dependências
 
@@ -30,7 +30,7 @@ Autenticação sem e-mail e senha e ativação por token temporário de uso úni
 
 Vitest em Node testa TypeScript puro e integração de tooling. Futuras regras exigem testes de comportamento e falhas. Testes de componentes e ponta a ponta serão escolhidos quando existirem fluxos reais, sem simular segurança inexistente. Exportação web valida Metro/Router; testes nativos continuam necessários antes de distribuição. Novas dependências e decisões estruturais devem ser justificadas por necessidade e ADR quando relevante.
 
-## Módulo de membros — entrega 01
+## Módulo de membros — entregas 01 e 02
 
 `src/domain/members` contém `Member` imutável, tipos, erros e contrato de repositório sem exclusão. `src/application/members` contém sete casos de uso reunidos em `MemberUseCases`, erros e portas de transação, auditoria, atribuições futuras, relógio e identificadores. Não há abstrações genéricas, contêiner de injeção ou serviços globais. Testes ficam em `tests/members`, permitindo que o domínio continue sem imports de bibliotecas de testes.
 
@@ -47,4 +47,12 @@ A divisão em camadas permanece. Persistência local e sincronização pertencem
 - Executar notificações no servidor com deduplicação, validação de atualidade, silêncio coletivo e exceção de prioridade conforme o PRD. Central interna e entrega push são conceitos separados; entrega imediata continua sujeita à conectividade e ao sistema operacional.
 - Manter a proteção do último administrador e a unidade de trabalho da entrega 01 como contratos. O backend escolhido deverá garantir atomicidade real entre desativação, retirada de designações e auditoria; uma fila offline do cliente não cumpre essa transação por si só.
 
-A política de consulta da entrega 01 está parcialmente superada: hoje os casos de uso restringem `get` dos não administradores ao próprio cadastro e `list` a administradores. O PRD exige consulta da equipe ativa pelos membros autorizados, omitindo telefone e inativos para não administradores. Código e testes não foram alterados nesta consolidação. A adaptação funcional deve ser uma entrega própria.
+A entrega 02 implementa a política de consulta do PRD: solicitantes ativos podem consultar a equipe ativa; administradores também veem inativos e telefones. O filtro de situação ocorre antes da projeção e a propriedade de telefone é omitida para não administradores. A restrição de escrita não mudou. Sem sessão confiável resolvida no servidor, esses casos de uso não são uma API autenticada.
+
+## Concorrência otimista de membros — entrega 02
+
+`Member.version` é restaurada explicitamente, começa em 1 na criação e avança em cada alteração efetiva. Todas as mutações existentes exigem `expectedVersion`. A aplicação faz uma verificação inicial na unidade de trabalho para rejeitar requisições obsoletas; essa verificação sozinha não é a garantia de persistência.
+
+`MemberRepository.saveIfVersion` exige comparação e gravação atômicas no armazenamento, com escopo por identificador/congregação/versão e retorno indicativo de sucesso. Não há mais método de atualização irrestrita. O futuro adaptador deve usar escrita condicional e conferir o resultado (por exemplo, quantidade de linhas alteradas), sem separar leitura da comparação e gravação. Um falso gera conflito antes de executar efeitos. Auditoria inclui versões anterior/posterior, sem valores pessoais.
+
+O controle de versão por membro não impede duas desativações simultâneas de administradores diferentes. Portanto, a serialização e o bloqueio adequados ao conjunto de administradores da congregação continuam obrigatórios no servidor, junto da transação que inclui designações e auditoria. Os testes só exercitam o contrato em memória. Ver ADR-004 para no-ops, erros, alternativas e limites.

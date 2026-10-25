@@ -17,6 +17,7 @@ export type MemberAuditAction =
 export interface MemberAuditState {
   readonly role: MemberRole;
   readonly status: MemberStatus;
+  readonly version: number;
 }
 
 export interface MemberAuditEvent {
@@ -74,6 +75,7 @@ export interface PublicMemberView {
   readonly name: string;
   readonly role: MemberRole;
   readonly status: MemberStatus;
+  readonly version: number;
 }
 
 export interface AdministratorMemberView extends PublicMemberView {

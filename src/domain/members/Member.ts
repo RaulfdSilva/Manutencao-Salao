@@ -10,6 +10,7 @@ export interface MemberRecord {
   readonly phone: string | null;
   readonly role: MemberRole;
   readonly status: MemberStatus;
+  readonly version: number;
 }
 
 export interface MemberProfile {
@@ -21,6 +22,12 @@ export interface NewMember extends MemberProfile {
   readonly id: string;
   readonly congregationId: string;
   readonly role: MemberRole;
+}
+
+export function assertValidMemberVersion(version: number): void {
+  if (!Number.isSafeInteger(version) || version < 1) {
+    throw new MemberError('INVALID_VERSION');
+  }
 }
 
 function validateIdentifier(value: string): void {
@@ -48,6 +55,7 @@ export class Member {
   private constructor(record: MemberRecord) {
     validateIdentifier(record.id);
     validateIdentifier(record.congregationId);
+    assertValidMemberVersion(record.version);
     if (
       !['administrator', 'maintenance_manager', 'member'].includes(record.role)
     ) {
@@ -63,6 +71,7 @@ export class Member {
       phone: normalizePhone(record.phone),
       role: record.role,
       status: record.status,
+      version: record.version,
     });
     Object.freeze(this);
   }
@@ -75,6 +84,7 @@ export class Member {
       phone: input.phone ?? null,
       role: input.role,
       status: 'active',
+      version: 1,
     });
   }
 
@@ -101,29 +111,46 @@ export class Member {
   get status(): MemberStatus {
     return this.record.status;
   }
+  get version(): number {
+    return this.record.version;
+  }
 
   get isActiveAdministrator(): boolean {
     return this.status === 'active' && this.role === 'administrator';
   }
 
   editProfile(input: MemberProfile): Member {
-    return new Member({
-      ...this.record,
+    return this.evolve({
       name: input.name,
       phone: input.phone === undefined ? this.phone : input.phone,
     });
   }
 
   changeRole(role: MemberRole): Member {
-    return new Member({ ...this.record, role });
+    return this.evolve({ role });
   }
 
   deactivate(): Member {
-    return new Member({ ...this.record, status: 'inactive' });
+    return this.evolve({ status: 'inactive' });
   }
 
   reactivate(): Member {
-    return new Member({ ...this.record, status: 'active' });
+    return this.evolve({ status: 'active' });
+  }
+
+  private evolve(
+    changes: Partial<Pick<MemberRecord, 'name' | 'phone' | 'role' | 'status'>>,
+  ): Member {
+    const candidate = new Member({ ...this.record, ...changes });
+    if (
+      candidate.name === this.name &&
+      candidate.phone === this.phone &&
+      candidate.role === this.role &&
+      candidate.status === this.status
+    ) {
+      return this;
+    }
+    return new Member({ ...candidate.record, version: this.version + 1 });
   }
 
   toRecord(): Readonly<MemberRecord> {

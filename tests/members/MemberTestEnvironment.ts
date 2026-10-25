@@ -1,4 +1,5 @@
 import { Member } from '../../src/domain/members/Member';
+import { MemberError } from '../../src/domain/members/MemberError';
 import type { MemberRecord } from '../../src/domain/members/Member';
 import type {
   FutureAssignments,
@@ -14,6 +15,7 @@ export class MemberTestEnvironment implements MemberTransactions {
   events: MemberAuditEvent[] = [];
   releases: Parameters<FutureAssignments['releaseForMember']>[0][] = [];
   failure: 'save' | 'release' | 'audit' | null = null;
+  rejectConditionalSave = false;
   private tail: Promise<void> = Promise.resolve();
 
   seed(input: Partial<MemberRecord> & Pick<MemberRecord, 'id'>): Member {
@@ -23,6 +25,7 @@ export class MemberTestEnvironment implements MemberTransactions {
       phone: '+5511999990000',
       role: 'member',
       status: 'active',
+      version: 1,
       ...input,
     });
     this.records.set(member.id, member);
@@ -60,11 +63,21 @@ export class MemberTestEnvironment implements MemberTransactions {
               throw new MemberOperationError('MEMBER_ALREADY_EXISTS');
             this.records.set(member.id, member);
           },
-          save: async (member) => {
+          saveIfVersion: async (member, expectedVersion) => {
             if (this.failure === 'save') throw new Error('Storage unavailable');
-            if (!this.records.has(member.id))
-              throw new MemberOperationError('MEMBER_NOT_FOUND');
+            const stored = this.records.get(member.id);
+            if (
+              this.rejectConditionalSave ||
+              !stored ||
+              member.congregationId !== congregationId ||
+              stored.congregationId !== congregationId ||
+              stored.version !== expectedVersion
+            )
+              return false;
+            if (member.version !== expectedVersion + 1)
+              throw new MemberError('INVALID_VERSION');
             this.records.set(member.id, member);
+            return true;
           },
         },
         futureAssignments: {

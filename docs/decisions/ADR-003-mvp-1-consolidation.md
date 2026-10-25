@@ -35,3 +35,7 @@ Escolher Supabase ou uma biblioteca offline agora anteciparia decisões técnica
 Continuam as seis validações da seção 13 do PRD: fonte legível do checklist, Hourglass, backend/autenticação, conclusão de pendências, fotos offline e conflitos/encerramento colaborativo. Somam-se a conciliação da regra quinzenal anterior e a adequação funcional da consulta da equipe. Não inventar procedimentos oficiais.
 
 A validação desta entrega é documental: revisar cobertura das 14 seções, consistência entre documentos, links, formatação e ausência de alterações fora de Markdown. Verificações existentes podem ser executadas como regressão, sem provar offline, backend ou os novos comportamentos. O estado dos commits, branches e PR deve ser reportado separadamente da aprovação de requisitos e da publicação do ambiente.
+
+## Evolução na entrega 02
+
+A divergência de consulta documentada nas decisões 2/3 foi resolvida por implementação separada. O ADR-004 registra a política implementada, a obrigatoriedade de versão esperada e o contrato de escrita condicional. As referências à ausência dessa adequação no texto acima descrevem o estado da consolidação original, não o estado atual. A conciliação da recorrência quinzenal e as decisões de infraestrutura continuam pendentes.

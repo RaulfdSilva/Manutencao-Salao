@@ -31,6 +31,7 @@ describe('member registration and queries', () => {
       id: 'admin',
       congregationId: 'other',
       status: 'inactive',
+      version: 999,
       name: 'João',
       role: 'member' as const,
     };
@@ -38,6 +39,7 @@ describe('member registration and queries', () => {
       id: 'generated-id',
       congregationId: admin.congregationId,
       status: 'active',
+      version: 1,
     });
     expect(environment.records.get('admin')?.role).toBe('administrator');
   });
@@ -54,6 +56,7 @@ describe('member registration and queries', () => {
       phone: null,
       role: 'member',
       status: 'active',
+      version: 1,
     });
     expect(environment.events).toEqual([
       {
@@ -63,7 +66,7 @@ describe('member registration and queries', () => {
         occurredAt: now,
         action: 'created',
         before: null,
-        after: { role: 'member', status: 'active' },
+        after: { role: 'member', status: 'active', version: 1 },
       },
     ]);
   });
@@ -112,19 +115,31 @@ describe('member registration and queries', () => {
   });
 
   it.each<MemberRole>(['member', 'maintenance_manager'])(
-    'omits the phone property entirely for %s viewing their own record',
+    'allows %s to query the active team without phone numbers',
     async (role) => {
       environment.seed({ id: 'target', role });
       const actor = { ...admin, memberId: 'target' };
       const view = await useCases.get(actor, 'target');
       expect(view).not.toHaveProperty('phone');
       expect(JSON.stringify(view)).not.toContain('+5511999990000');
-      await expect(useCases.get(actor, 'admin')).rejects.toThrowError(
-        new MemberOperationError('FORBIDDEN'),
+      expect(await useCases.get(actor, 'admin')).toMatchObject({
+        id: 'admin',
+        role: 'administrator',
+      });
+      expect(await useCases.get(actor, 'admin')).not.toHaveProperty('phone');
+      environment.seed({ id: 'inactive', status: 'inactive' });
+      environment.seed({ id: 'foreign', congregationId: 'other' });
+      const team = await useCases.list(actor);
+      expect(team.map((member) => member.id)).toEqual(['admin', 'target']);
+      expect(team.every((member) => !Object.hasOwn(member, 'phone'))).toBe(
+        true,
       );
-      await expect(useCases.list(actor)).rejects.toThrowError(
-        new MemberOperationError('FORBIDDEN'),
-      );
+      expect(JSON.stringify(team)).not.toContain('+5511999990000');
+      for (const id of ['inactive', 'foreign', 'missing']) {
+        await expect(useCases.get(actor, id)).rejects.toThrowError(
+          new MemberOperationError('MEMBER_NOT_FOUND'),
+        );
+      }
     },
   );
 });
@@ -139,20 +154,20 @@ describe('authorization', () => {
     {
       name: 'update',
       run: (actor: MemberActor) =>
-        useCases.update(actor, 'target', { name: 'João' }),
+        useCases.update(actor, 'target', { name: 'João' }, 1),
     },
     {
       name: 'changeRole',
       run: (actor: MemberActor) =>
-        useCases.changeRole(actor, 'target', 'administrator'),
+        useCases.changeRole(actor, 'target', 'administrator', 1),
     },
     {
       name: 'deactivate',
-      run: (actor: MemberActor) => useCases.deactivate(actor, 'target'),
+      run: (actor: MemberActor) => useCases.deactivate(actor, 'target', 1),
     },
     {
       name: 'reactivate',
-      run: (actor: MemberActor) => useCases.reactivate(actor, 'target'),
+      run: (actor: MemberActor) => useCases.reactivate(actor, 'target', 1),
     },
   ];
   const identities = [
@@ -211,6 +226,9 @@ describe('authorization', () => {
     await expect(
       useCases.get({ ...admin, memberId: 'target' }, 'target'),
     ).rejects.toThrowError(new MemberOperationError('FORBIDDEN'));
+    await expect(
+      useCases.list({ ...admin, memberId: 'target' }),
+    ).rejects.toThrowError(new MemberOperationError('FORBIDDEN'));
   });
 });
 
@@ -223,7 +241,7 @@ describe('profile, role and state changes', () => {
       role: 'administrator',
       status: 'inactive',
     };
-    expect(await useCases.update(admin, 'target', input)).toMatchObject({
+    expect(await useCases.update(admin, 'target', input, 1)).toMatchObject({
       id: 'target',
       congregationId: admin.congregationId,
       role: 'member',
@@ -233,7 +251,7 @@ describe('profile, role and state changes', () => {
 
   it('rejects a role outside the approved set without side effects', async () => {
     await expect(
-      useCases.changeRole(admin, 'target', 'owner' as MemberRole),
+      useCases.changeRole(admin, 'target', 'owner' as MemberRole, 1),
     ).rejects.toThrowError(new MemberError('INVALID_ROLE'));
     expect(environment.records.get('target')?.role).toBe('member');
     expect(environment.events).toEqual([]);
@@ -242,15 +260,15 @@ describe('profile, role and state changes', () => {
   it('does not mutate members in another congregation', async () => {
     const member = environment.seed({ id: 'foreign', congregationId: 'other' });
     await expect(
-      useCases.update(admin, 'foreign', { name: 'Outra' }),
+      useCases.update(admin, 'foreign', { name: 'Outra' }, 1),
     ).rejects.toThrowError(new MemberOperationError('MEMBER_NOT_FOUND'));
     await expect(
-      useCases.changeRole(admin, 'foreign', 'administrator'),
+      useCases.changeRole(admin, 'foreign', 'administrator', 1),
     ).rejects.toThrowError(new MemberOperationError('MEMBER_NOT_FOUND'));
-    await expect(useCases.deactivate(admin, 'foreign')).rejects.toThrowError(
+    await expect(useCases.deactivate(admin, 'foreign', 1)).rejects.toThrowError(
       new MemberOperationError('MEMBER_NOT_FOUND'),
     );
-    await expect(useCases.reactivate(admin, 'foreign')).rejects.toThrowError(
+    await expect(useCases.reactivate(admin, 'foreign', 1)).rejects.toThrowError(
       new MemberOperationError('MEMBER_NOT_FOUND'),
     );
     expect(environment.records.get('foreign')).toBe(member);
@@ -259,7 +277,7 @@ describe('profile, role and state changes', () => {
   });
 
   it('edits profile without changing identity, role or state; preserves then clears phone', async () => {
-    const edited = await useCases.update(admin, 'target', { name: 'Maria' });
+    const edited = await useCases.update(admin, 'target', { name: 'Maria' }, 1);
     expect(edited).toEqual({
       id: 'target',
       congregationId: admin.congregationId,
@@ -267,9 +285,10 @@ describe('profile, role and state changes', () => {
       phone: '+5511999990000',
       role: 'member',
       status: 'active',
+      version: 2,
     });
     expect(
-      await useCases.update(admin, 'target', { name: 'Maria', phone: null }),
+      await useCases.update(admin, 'target', { name: 'Maria', phone: null }, 2),
     ).toHaveProperty('phone', null);
     expect(environment.events.map((e) => e.action)).toEqual([
       'profile_updated',
@@ -280,10 +299,10 @@ describe('profile, role and state changes', () => {
   it('rejects invalid edits and unknown targets without modifying data', async () => {
     const before = environment.records.get('target');
     await expect(
-      useCases.update(admin, 'target', { name: ' ' }),
+      useCases.update(admin, 'target', { name: ' ' }, 1),
     ).rejects.toThrowError(new MemberError('INVALID_NAME'));
     await expect(
-      useCases.update(admin, 'missing', { name: 'Maria' }),
+      useCases.update(admin, 'missing', { name: 'Maria' }, 1),
     ).rejects.toThrowError(new MemberOperationError('MEMBER_NOT_FOUND'));
     expect(environment.records.get('target')).toBe(before);
     expect(environment.events).toEqual([]);
@@ -291,7 +310,7 @@ describe('profile, role and state changes', () => {
 
   it('changes one role without changing the member identity or state', async () => {
     expect(
-      await useCases.changeRole(admin, 'target', 'maintenance_manager'),
+      await useCases.changeRole(admin, 'target', 'maintenance_manager', 1),
     ).toMatchObject({
       id: 'target',
       role: 'maintenance_manager',
@@ -319,8 +338,8 @@ describe('profile, role and state changes', () => {
       });
       const result =
         operation === 'deactivate'
-          ? useCases.deactivate(admin, 'admin')
-          : useCases.changeRole(admin, 'admin', 'member');
+          ? useCases.deactivate(admin, 'admin', 1)
+          : useCases.changeRole(admin, 'admin', 'member', 1);
       await expect(result).rejects.toThrowError(
         new MemberOperationError('LAST_ACTIVE_ADMINISTRATOR'),
       );
@@ -337,8 +356,8 @@ describe('profile, role and state changes', () => {
     async (operation) => {
       environment.seed({ id: 'second-admin', role: 'administrator' });
       const view = await (operation === 'deactivate'
-        ? useCases.deactivate(admin, 'admin')
-        : useCases.changeRole(admin, 'admin', 'member'));
+        ? useCases.deactivate(admin, 'admin', 1)
+        : useCases.changeRole(admin, 'admin', 'member', 1));
       expect(view).not.toHaveProperty('phone');
       expect(
         environment.records.get('second-admin')?.isActiveAdministrator,
@@ -348,7 +367,7 @@ describe('profile, role and state changes', () => {
 
   it('requests assignment removal and an audit in the same deactivation operation, retaining the member identity', async () => {
     const before = environment.records.get('target');
-    expect(await useCases.deactivate(admin, 'target')).toMatchObject({
+    expect(await useCases.deactivate(admin, 'target', 1)).toMatchObject({
       id: 'target',
       status: 'inactive',
     });
@@ -368,14 +387,14 @@ describe('profile, role and state changes', () => {
       before: { status: 'active' },
       after: { status: 'inactive' },
     });
-    await useCases.deactivate(admin, 'target');
+    await useCases.deactivate(admin, 'target', 2);
     expect(environment.releases).toHaveLength(1);
     expect(environment.events).toHaveLength(1);
   });
 
   it('reactivates eligibility without invoking assignment restoration or any device operation', async () => {
-    await useCases.deactivate(admin, 'target');
-    const member = await useCases.reactivate(admin, 'target');
+    await useCases.deactivate(admin, 'target', 1);
+    const member = await useCases.reactivate(admin, 'target', 2);
     expect(member).toMatchObject({
       id: 'target',
       role: 'member',
@@ -386,13 +405,13 @@ describe('profile, role and state changes', () => {
       'deactivated',
       'reactivated',
     ]);
-    await useCases.reactivate(admin, 'target');
+    await useCases.reactivate(admin, 'target', 3);
     expect(environment.events).toHaveLength(2);
   });
 
   it('does not write or audit unchanged profile or role', async () => {
-    await useCases.update(admin, 'target', { name: 'Ana Silva' });
-    await useCases.changeRole(admin, 'target', 'member');
+    await useCases.update(admin, 'target', { name: 'Ana Silva' }, 1);
+    await useCases.changeRole(admin, 'target', 'member', 1);
     expect(environment.events).toEqual([]);
   });
 
@@ -400,9 +419,9 @@ describe('profile, role and state changes', () => {
     'propagates %s failures and exercises rollback in the test adapter',
     async (failure) => {
       environment.failure = failure;
-      await expect(useCases.deactivate(admin, 'target')).rejects.toThrowError(
-        'unavailable',
-      );
+      await expect(
+        useCases.deactivate(admin, 'target', 1),
+      ).rejects.toThrowError('unavailable');
       expect(environment.records.get('target')?.status).toBe('active');
       expect(environment.releases).toEqual([]);
       expect(environment.events).toEqual([]);
@@ -420,10 +439,11 @@ describe('profile, role and state changes', () => {
   it('rejects a competing removal of the last administrator under the test transaction serialization', async () => {
     environment.seed({ id: 'second-admin', role: 'administrator' });
     const results = await Promise.allSettled([
-      useCases.deactivate(admin, 'admin'),
+      useCases.deactivate(admin, 'admin', 1),
       useCases.deactivate(
         { ...admin, memberId: 'second-admin' },
         'second-admin',
+        1,
       ),
     ]);
     expect(results[0]?.status).toBe('fulfilled');
