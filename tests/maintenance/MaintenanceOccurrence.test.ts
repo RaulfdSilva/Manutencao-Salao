@@ -20,6 +20,8 @@ function occurrence(config = configuration): MaintenanceOccurrence {
     assignedMemberIds: [],
     source: {
       ruleId: 'rule',
+      cycleKey: 'weekend:2026-11-07',
+      ruleVersion: 1,
       slotDate: schedule.date,
       weekendStart: schedule.date,
     },

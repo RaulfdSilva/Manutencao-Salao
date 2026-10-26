@@ -1,5 +1,5 @@
 import type { Member } from '../members/Member';
-import { freezeSchedule, parseDate } from './Calendar';
+import { freezeSchedule, recurrenceCycle } from './Calendar';
 import { MaintenanceError } from './MaintenanceError';
 import {
   assertCategory,
@@ -18,6 +18,8 @@ import type {
 
 export interface OccurrenceSource {
   readonly ruleId: string;
+  readonly cycleKey: string;
+  readonly ruleVersion: number;
   readonly slotDate: string;
   readonly weekendStart: string | null;
 }
@@ -54,11 +56,18 @@ export class MaintenanceOccurrence {
     let source: OccurrenceSource | null = null;
     if (record.source) {
       assertIdentifier(record.source.ruleId);
-      parseDate(record.source.slotDate);
-      if (record.source.weekendStart !== null)
-        parseDate(record.source.weekendStart);
+      assertVersion(record.source.ruleVersion);
+      const cycle = recurrenceCycle(
+        record.category,
+        record.source.slotDate,
+        record.source.weekendStart,
+      );
+      if (record.source.cycleKey !== cycle.cycleKey)
+        throw new MaintenanceError('INVALID_CYCLE');
       source = Object.freeze({
         ruleId: record.source.ruleId,
+        cycleKey: record.source.cycleKey,
+        ruleVersion: record.source.ruleVersion,
         slotDate: record.source.slotDate,
         weekendStart: record.source.weekendStart,
       });

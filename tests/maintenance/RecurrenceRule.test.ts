@@ -173,9 +173,8 @@ describe('recurrence approval and validation', () => {
         ? { kind: 'weekends', day: 'saturday' }
         : { kind: 'months', dayOfMonth: 15, overflow: 'skip' };
     expect(rule({ category, pattern }).toRecord()).toMatchObject({
-      category,
       version: 1,
-      approvedBy: 'admin',
+      revisions: [expect.objectContaining({ category, approvedBy: 'admin' })],
     });
   });
   it('rejects unknown categories or incompatible recurrence kinds', () => {
@@ -215,18 +214,25 @@ describe('recurrence approval and validation', () => {
       id: 'injected',
       congregationId: 'other',
       time: '10:00',
+      effectiveFrom: '2026-11-01',
     };
     const revised = original.revise(changes, 'other-admin', now);
     expect(revised.toRecord()).toMatchObject({
       id: original.id,
       congregationId: original.congregationId,
       version: 2,
-      time: '10:00',
-      approvedBy: 'other-admin',
+      revisions: [
+        original.latestRevision,
+        expect.objectContaining({
+          time: '10:00',
+          approvedBy: 'other-admin',
+          effectiveFrom: '2026-11-01',
+        }),
+      ],
     });
-    expect(original.toRecord().time).toBe('09:00');
+    expect(original.latestRevision.time).toBe('09:00');
     expect(
-      Object.isFrozen(revised.toRecord().defaults.responsibleMemberIds),
+      Object.isFrozen(revised.latestRevision.defaults.responsibleMemberIds),
     ).toBe(true);
   });
 });

@@ -131,6 +131,11 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
               return false;
             if (rule.version !== expectedVersion + 1)
               throw new MaintenanceError('INVALID_VERSION');
+            if (
+              JSON.stringify(rule.toRecord().revisions.slice(0, -1)) !==
+              JSON.stringify(current.toRecord().revisions)
+            )
+              throw new MaintenanceError('INVALID_RECURRENCE');
             this.rules.set(rule.id, rule);
             return true;
           },
@@ -154,6 +159,8 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
               );
             }),
           insert: async (occurrence) => {
+            if (occurrence.toRecord().source !== null)
+              throw new MaintenanceError('INVALID_CONFIGURATION');
             insertOccurrence(occurrence);
           },
           insertGeneratedIfAbsent: async (occurrence) => {
@@ -165,7 +172,7 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
               return (
                 record.congregationId === scope &&
                 record.source?.ruleId === source.ruleId &&
-                record.source.slotDate === source.slotDate
+                record.source.cycleKey === source.cycleKey
               );
             });
             if (existing) return { inserted: false, occurrence: existing };
@@ -183,6 +190,11 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
               return false;
             if (occurrence.version !== expectedVersion + 1)
               throw new MaintenanceError('INVALID_VERSION');
+            if (
+              JSON.stringify(occurrence.toRecord().source) !==
+              JSON.stringify(current.toRecord().source)
+            )
+              throw new MaintenanceError('INVALID_CYCLE');
             this.occurrences.set(occurrence.id, occurrence);
             return true;
           },

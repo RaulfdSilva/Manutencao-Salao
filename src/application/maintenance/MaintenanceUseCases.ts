@@ -15,6 +15,7 @@ import type {
 import { RecurrenceRule } from '../../domain/maintenance/RecurrenceRule';
 import type {
   RecurrenceRuleRecord,
+  RecurrenceRevisionSettings,
   RecurrenceSettings,
 } from '../../domain/maintenance/RecurrenceRule';
 import type { MemberActor } from '../members/MemberContracts';
@@ -107,7 +108,7 @@ export class MaintenanceUseCases {
         await validateConfiguration(
           tx,
           actor.congregationId,
-          rule.toRecord().defaults,
+          rule.latestRevision.defaults,
         );
         await tx.rules.insert(rule);
         await tx.events.append({
@@ -124,7 +125,7 @@ export class MaintenanceUseCases {
   reviseRule(
     actor: MemberActor,
     ruleId: string,
-    settings: RecurrenceSettings,
+    settings: RecurrenceRevisionSettings,
     expectedVersion: number,
   ): Promise<RecurrenceRuleRecord> {
     return this.dependencies.transactions.run(
@@ -141,7 +142,7 @@ export class MaintenanceUseCases {
         await validateConfiguration(
           tx,
           actor.congregationId,
-          after.toRecord().defaults,
+          after.latestRevision.defaults,
         );
         if (!(await tx.rules.saveIfVersion(after, expectedVersion)))
           throw new MaintenanceOperationError('VERSION_CONFLICT');
@@ -168,15 +169,17 @@ export class MaintenanceUseCases {
         requireAdministrator(await actorIn(tx, actor));
         const rule = await ruleIn(tx, actor.congregationId, ruleId);
         requireVersion(rule.version, expectedRuleVersion);
-        const settings = rule.toRecord();
         const result: OccurrenceRecord[] = [];
         for (const slot of rule.slots(range)) {
+          const settings = slot.revision;
           const candidate = MaintenanceOccurrence.create({
             id: this.dependencies.ids.next(),
             congregationId: actor.congregationId,
             category: settings.category,
             source: {
               ruleId,
+              cycleKey: slot.cycleKey,
+              ruleVersion: settings.version,
               slotDate: slot.date,
               weekendStart: slot.weekendStart,
             },

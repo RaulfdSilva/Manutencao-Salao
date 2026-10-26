@@ -46,9 +46,14 @@ describe('approved planning and bounded generation', () => {
     expect(rule).toMatchObject({
       id: 'generated-1',
       congregationId: admin.congregationId,
-      approvedBy: 'admin',
-      approvedAt: now,
       version: 1,
+      revisions: [
+        expect.objectContaining({
+          approvedBy: 'admin',
+          approvedAt: now,
+          effectiveFrom: settings.startsOn,
+        }),
+      ],
     });
     expect(environment.events[0]).toMatchObject({
       kind: 'rule_approved',
@@ -120,12 +125,19 @@ describe('approved planning and bounded generation', () => {
       rule.id,
       {
         ...settings,
+        effectiveFrom: '2026-11-01',
         time: '11:00',
         defaults: { ...configuration, quantities: { minimum: 4, desired: 5 } },
       },
       1,
     );
-    expect(revised).toMatchObject({ version: 2, approvedBy: 'admin' });
+    expect(revised).toMatchObject({
+      version: 2,
+      revisions: [
+        expect.anything(),
+        expect.objectContaining({ approvedBy: 'admin' }),
+      ],
+    });
     expect(await useCases.get(admin, first.id)).toEqual(adjusted);
     expect(generated[1]?.configuration.quantities).toEqual({
       minimum: 2,
@@ -354,7 +366,12 @@ describe('administrative permissions and isolation', () => {
         useCases.generate(actor, rule.id, range, 1),
       ).rejects.toThrowError(new MaintenanceOperationError('FORBIDDEN'));
       await expect(
-        useCases.reviseRule(actor, rule.id, settings, 1),
+        useCases.reviseRule(
+          actor,
+          rule.id,
+          { ...settings, effectiveFrom: '2026-11-01' },
+          1,
+        ),
       ).rejects.toThrowError(new MaintenanceOperationError('FORBIDDEN'));
       expect(environment.occurrences.size).toBe(1);
       expect(environment.events).toHaveLength(1);
@@ -374,7 +391,12 @@ describe('administrative permissions and isolation', () => {
       useCases.generate(actor, otherRule.id, range, 1),
     ).rejects.toThrowError(new MaintenanceOperationError('RULE_NOT_FOUND'));
     await expect(
-      useCases.reviseRule(actor, otherRule.id, settings, 1),
+      useCases.reviseRule(
+        actor,
+        otherRule.id,
+        { ...settings, effectiveFrom: '2026-11-01' },
+        1,
+      ),
     ).rejects.toThrowError(new MaintenanceOperationError('RULE_NOT_FOUND'));
   });
 });
@@ -531,18 +553,28 @@ describe('versions, rollback and duplicate operations', () => {
     await useCases.reviseRule(
       admin,
       rule.id,
-      { ...settings, time: '10:00' },
+      { ...settings, time: '10:00', effectiveFrom: '2026-11-01' },
       1,
     );
     await expect(
       useCases.generate(admin, rule.id, range, 1),
     ).rejects.toThrowError(new MaintenanceOperationError('VERSION_CONFLICT'));
     await expect(
-      useCases.reviseRule(admin, rule.id, settings, 1),
+      useCases.reviseRule(
+        admin,
+        rule.id,
+        { ...settings, effectiveFrom: '2026-11-01' },
+        1,
+      ),
     ).rejects.toThrowError(new MaintenanceOperationError('VERSION_CONFLICT'));
     environment.rejectRuleSave = true;
     await expect(
-      useCases.reviseRule(admin, rule.id, settings, 2),
+      useCases.reviseRule(
+        admin,
+        rule.id,
+        { ...settings, effectiveFrom: '2026-11-01' },
+        2,
+      ),
     ).rejects.toThrowError(new MaintenanceOperationError('VERSION_CONFLICT'));
     expect(environment.rules.get(rule.id)?.version).toBe(2);
     expect(environment.events).toHaveLength(2);

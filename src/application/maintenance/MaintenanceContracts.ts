@@ -49,7 +49,7 @@ export interface MaintenanceUnitOfWork {
 export interface MaintenanceTransactions {
   /**
    * Trusted server boundary. Serialize by congregation, including member/role
-   * reads and slot insertion. Roll back records AND events on failure.
+   * reads, rule revision and unique cycle insertion. Roll back records AND events on failure.
    * Must share the server transaction with member deactivation/assignment removal.
    */
   run<T>(
