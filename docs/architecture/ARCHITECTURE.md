@@ -66,3 +66,11 @@ Regra aprovada e ocorrência são agregados separados. A chave de geração usa 
 Eventos transacionais são o contrato de histórico técnico/outbox para invalidação de lembretes e notificação posterior. O consumidor futuro deve verificar versão/situação atual antes de enviar. Disponibilidade usa revisão para preservar ou pedir reconfirmação, sem módulo real de respostas. `AudioTeamSchedule` é porta interna de IDs da equipe, sem presumir formato/API do Hourglass e sem chamada real nesta entrega.
 
 Data, horário e fuso são explícitos; a aritmética de datas não resolve instantes UTC nem ambiguidades DST. A retirada de designações por desativação deve futuramente compartilhar uma transação com o módulo de membros, não compor dois callbacks independentes. Ver ADR-005; os contratos não provam persistência, autorização, notificações ou offline de produção.
+
+## Convites e disponibilidade — entrega 04
+
+`AvailabilityPlan` é agregado independente por congregação/ocorrência/`availabilityRevision`, com CAS próprio, janela, público reconciliado e última resposta por membro. “Sem resposta” é calculado, não um registro negativo. Domínio depende apenas de contratos/tipos internos; aplicação lê membros/ocorrências e injeta relógio e transações. Não altera a entidade de manutenção nem suas designações para responder.
+
+`AvailabilityUseCases` oferece configuração, resposta, consulta própria, totais autorizados, encerramento/reabertura e entradas confiáveis para agendamento/reconciliação. `refreshIn` recebe a unidade de trabalho compartilhada com a alteração de membro/designação/cancelamento; a futura composição deve usá-la na mesma transação, sem duas transações remotas independentes. Consultas/respostas revalidam os dados atuais. Eventos e jobs precisam ser gravados atomicamente, sem adapter de produção nesta entrega.
+
+A guarda `now >= deadline` independe de job ou UI. Jobs identificados por revisão/geração são obsoletos após reconfirmação/reabertura; executor real precisa garantir execução e retries, nunca consumir definitivamente uma entrega antecipada. Convites incluem geração de elegibilidade por destinatário; `invitationIsCurrent` revalida escopo, situação, revisão, público, prazo, geração e ausência de resposta. Fechamento seguido de reabertura registra a geração fechada e a nova geração separadamente. Ver ADR-006.

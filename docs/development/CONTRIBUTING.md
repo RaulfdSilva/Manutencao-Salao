@@ -40,3 +40,7 @@ Mudanças de comportamento exigem atualização da documentação e testes. Depe
 Separar requisitos pretendidos, comportamento implementado e verificações executadas. Uma atualização documental não muda permissões ou testes existentes. A entrega 02 adequou a consulta da equipe; preservar os testes de telefone, inativos e restrições administrativas. Toda mutação de membro deve receber a versão lida pelo solicitante e usar a escrita condicional do repositório. Não recuperar conflito automaticamente reenviando os mesmos dados com uma versão nova.
 
 Não acrescentar funcionalidades fora do PRD, métricas de frequência ou fiscalização. Planejar cenários offline, repetição de operações, conflitos e revalidação de autorização nas entregas pertinentes. O backend continua a definir; alterações estruturais exigem ADR antes de introduzir dependências. Checklist oficial e Hourglass precisam de fontes reais, sem conteúdo ou formatos inventados.
+
+## Testes de disponibilidade
+
+Preservar os testes de modalidades, prazo exato, exceção Sim para Não, reconfirmação e convites obsoletos. Simular falhas de eventos/jobs, CAS e rollback da reconciliação na unidade de trabalho compartilhada. Adaptadores reais precisarão passar testes equivalentes com concorrência entre processos e agendamento independente do aplicativo. Não usar a fila de testes como implementação do servidor. Ver ADR-006.
