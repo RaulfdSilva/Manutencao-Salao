@@ -38,4 +38,4 @@ A validação desta entrega é documental: revisar cobertura das 14 seções, co
 
 ## Evolução na entrega 02
 
-A divergência de consulta documentada nas decisões 2/3 foi resolvida por implementação separada. O ADR-004 registra a política implementada, a obrigatoriedade de versão esperada e o contrato de escrita condicional. As referências à ausência dessa adequação no texto acima descrevem o estado da consolidação original, não o estado atual. A conciliação da recorrência quinzenal e as decisões de infraestrutura continuam pendentes.
+A divergência de consulta documentada nas decisões 2/3 foi resolvida por implementação separada. O ADR-004 registra a política implementada, a obrigatoriedade de versão esperada e o contrato de escrita condicional. As referências à ausência dessa adequação no texto acima descrevem o estado da consolidação original, não o estado atual. Na entrega 02, a conciliação da recorrência quinzenal e a infraestrutura permaneciam pendentes. A Implementação 03 conciliou a contagem pelo sábado e implementou o planejamento, conforme ADR-005; decisões de infraestrutura e o formato Hourglass continuam pendentes.

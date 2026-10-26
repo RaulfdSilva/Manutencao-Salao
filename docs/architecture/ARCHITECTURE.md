@@ -1,6 +1,6 @@
 # Arquitetura
 
-Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática e, desde as entregas 01/02, domínio e casos de uso de membros. Não existem adaptadores de persistência, autenticação ou telas de membros.
+Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática, domínio/casos de uso de membros (entregas 01/02) e planejamento de manutenções (entrega 03). Não existem adaptadores de persistência, autenticação ou telas de membros.
 
 ## Direção das dependências
 
@@ -56,3 +56,13 @@ A entrega 02 implementa a política de consulta do PRD: solicitantes ativos pode
 `MemberRepository.saveIfVersion` exige comparação e gravação atômicas no armazenamento, com escopo por identificador/congregação/versão e retorno indicativo de sucesso. Não há mais método de atualização irrestrita. O futuro adaptador deve usar escrita condicional e conferir o resultado (por exemplo, quantidade de linhas alteradas), sem separar leitura da comparação e gravação. Um falso gera conflito antes de executar efeitos. Auditoria inclui versões anterior/posterior, sem valores pessoais.
 
 O controle de versão por membro não impede duas desativações simultâneas de administradores diferentes. Portanto, a serialização e o bloqueio adequados ao conjunto de administradores da congregação continuam obrigatórios no servidor, junto da transação que inclui designações e auditoria. Os testes só exercitam o contrato em memória. Ver ADR-004 para no-ops, erros, alternativas e limites.
+
+## Planejamento de manutenções — entrega 03
+
+`src/domain/maintenance` contém calendário civil, categorias/configuração, `RecurrenceRule`, `MaintenanceOccurrence`, erros e contratos de repositórios. `src/application/maintenance` orquestra casos de uso com leitura de membros existentes, transações, IDs, relógio e eventos duráveis. Não há import de SDK, React ou Infrastructure nas camadas internas. Os testes ficam em `tests/maintenance`, com adaptador somente de testes.
+
+Regra aprovada e ocorrência são agregados separados. A chave de geração usa congregação, regra e ciclo estável (`cycleKey`), independente do dia de execução; unicidade e CAS devem ser garantidos no armazenamento. Configurações individuais não se propagam a irmãos de série e revisões de regra não sobrescrevem o existente. Regras guardam histórico imutável de revisões com `effectiveFrom` explícito. O calendário seleciona a configuração pela referência civil do ciclo (sábado ou dia 1 do mês), preservando a categoria e a ancoragem original. A origem guarda a versão aplicada; a inserção atômica devolve qualquer ciclo já materializado intacto. A geração exige intervalo explícito e limitado; não há cron ou tarefa infinita. Ver ADR-005 para vigências no meio do ciclo, mudanças de dia e reidratação sem fallback de campos legados.
+
+Eventos transacionais são o contrato de histórico técnico/outbox para invalidação de lembretes e notificação posterior. O consumidor futuro deve verificar versão/situação atual antes de enviar. Disponibilidade usa revisão para preservar ou pedir reconfirmação, sem módulo real de respostas. `AudioTeamSchedule` é porta interna de IDs da equipe, sem presumir formato/API do Hourglass e sem chamada real nesta entrega.
+
+Data, horário e fuso são explícitos; a aritmética de datas não resolve instantes UTC nem ambiguidades DST. A retirada de designações por desativação deve futuramente compartilhar uma transação com o módulo de membros, não compor dois callbacks independentes. Ver ADR-005; os contratos não provam persistência, autorização, notificações ou offline de produção.
