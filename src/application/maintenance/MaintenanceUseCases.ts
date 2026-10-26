@@ -1,3 +1,8 @@
+import {
+  assertDeadlineDecision,
+  technicalSnapshot,
+} from './MaintenanceLifecycleContracts';
+import type { ResponseDeadlineDecision } from './MaintenanceLifecycleContracts';
 import type { Member } from '../../domain/members/Member';
 import { assertRange } from '../../domain/maintenance/Calendar';
 import type { DateRange } from '../../domain/maintenance/Calendar';
@@ -194,6 +199,12 @@ export class MaintenanceUseCases {
           const stored =
             await tx.occurrences.insertGeneratedIfAbsent(candidate);
           if (stored.inserted) {
+            await tx.technicalHistory.record(
+              technicalSnapshot(
+                candidate.toRecord(),
+                this.dependencies.clock.now(),
+              ),
+            );
             await validateConfiguration(
               tx,
               actor.congregationId,
@@ -237,6 +248,12 @@ export class MaintenanceUseCases {
           occurrence.toRecord().configuration,
         );
         await tx.occurrences.insert(occurrence);
+        await tx.technicalHistory.record(
+          technicalSnapshot(
+            occurrence.toRecord(),
+            this.dependencies.clock.now(),
+          ),
+        );
         await tx.events.append({
           ...this.envelope(actor, 'occurrence', occurrence.id, 1),
           kind: 'occurrence_created',
@@ -305,6 +322,7 @@ export class MaintenanceUseCases {
     schedule: MaintenanceSchedule,
     decision: AvailabilityDecision,
     expectedVersion: number,
+    deadlineDecision: ResponseDeadlineDecision,
   ): Promise<{
     readonly occurrence: OccurrenceRecord;
     readonly reconfirmationRecommended: boolean;
@@ -315,11 +333,19 @@ export class MaintenanceUseCases {
       expectedVersion,
       'administrator',
       async (tx, before) => {
+        assertDeadlineDecision(deadlineDecision);
         const after = before.reschedule(schedule, decision);
         const recommendation =
           before.toRecord().schedule.date !== after.toRecord().schedule.date;
+        if (after !== before) await this.save(tx, before, after);
+        await tx.lifecycle.availabilityRescheduled({
+          before: before.toRecord(),
+          after: after.toRecord(),
+          deadlineDecision,
+          actorId: actor.memberId,
+          occurredAt: this.dependencies.clock.now(),
+        });
         if (after !== before) {
-          await this.save(tx, before, after);
           await tx.events.append({
             ...this.envelope(actor, 'occurrence', occurrenceId, after.version),
             kind: 'occurrence_rescheduled',
@@ -327,6 +353,7 @@ export class MaintenanceUseCases {
             after: after.toRecord(),
             invalidatesReminderVersionsThrough: before.version,
             availabilityDecision: decision,
+            deadlineDecision,
             reconfirmationRecommended: recommendation,
           });
         }
@@ -419,6 +446,11 @@ export class MaintenanceUseCases {
           after: after.toRecord(),
           invalidatesReminderVersionsThrough: before.version,
         });
+        if (kind === 'occurrence_cancelled')
+          await tx.lifecycle.availabilityCancelled(
+            after.toRecord(),
+            this.dependencies.clock.now(),
+          );
         return after.toRecord();
       },
     );
@@ -457,6 +489,9 @@ export class MaintenanceUseCases {
   ): Promise<void> {
     if (!(await tx.occurrences.saveIfVersion(after, before.version)))
       throw new MaintenanceOperationError('VERSION_CONFLICT');
+    await tx.technicalHistory.record(
+      technicalSnapshot(after.toRecord(), this.dependencies.clock.now()),
+    );
   }
   private envelope(
     actor: MemberActor,

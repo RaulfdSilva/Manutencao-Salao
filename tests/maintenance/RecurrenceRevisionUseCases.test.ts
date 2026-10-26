@@ -66,6 +66,7 @@ describe('safe recurrence revision and cycle materialization', () => {
       { ...schedule, date: '2026-11-08' },
       'reconfirm',
       1,
+      { kind: 'keep', expectedVersion: null },
     );
     await uc.reviseRule(admin, rule.id, sunday, 1);
     const repeated = await uc.generate(admin, rule.id, november, 2);
@@ -179,6 +180,7 @@ describe('safe recurrence revision and cycle materialization', () => {
         { ...schedule, date: '2027-01-15' },
         'preserve',
         1,
+        { kind: 'keep', expectedVersion: null },
       );
       await uc.reviseRule(
         admin,

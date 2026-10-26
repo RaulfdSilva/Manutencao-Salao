@@ -1,3 +1,5 @@
+import type { MaintenanceTechnicalSnapshot } from '../../src/application/maintenance/MaintenanceLifecycleContracts';
+import type { MaintenancePlanningEvent } from '../../src/application/maintenance/MaintenanceContracts';
 import { Member } from '../../src/domain/members/Member';
 import type { MemberRecord } from '../../src/domain/members/Member';
 import { MaintenanceOccurrence } from '../../src/domain/maintenance/MaintenanceOccurrence';
@@ -5,6 +7,7 @@ import type { OccurrenceRecord } from '../../src/domain/maintenance/MaintenanceO
 import { AvailabilityPlan } from '../../src/domain/availability/AvailabilityPlan';
 import type { AvailabilityRecord } from '../../src/domain/availability/AvailabilityPlan';
 import type {
+  AvailabilityDisposal,
   AvailabilityDeadline,
   AvailabilityEvent,
   AvailabilityUnitOfWork,
@@ -29,6 +32,10 @@ export class AvailabilityTestEnvironment implements AvailabilityDependencies {
   plans = new Map<string, AvailabilityPlan>();
   events: AvailabilityEvent[] = [];
   jobs: AvailabilityDeadline[] = [];
+  disposals = new Map<string, AvailabilityDisposal>();
+  technical: MaintenanceTechnicalSnapshot[] = [];
+  maintenanceEvents: MaintenancePlanningEvent[] = [];
+  failDisposal = false;
   failEvents = false;
   failJobs = false;
   refuseSave = false;
@@ -103,6 +110,9 @@ export class AvailabilityTestEnvironment implements AvailabilityDependencies {
   ): Promise<T> {
     const result = this.tail.then(async () => {
       const snapshot = {
+        disposals: new Map(this.disposals),
+        technical: [...this.technical],
+        maintenanceEvents: [...this.maintenanceEvents],
         members: new Map(this.members),
         occurrences: new Map(this.occurrences),
         plans: new Map(this.plans),
@@ -110,6 +120,47 @@ export class AvailabilityTestEnvironment implements AvailabilityDependencies {
         jobs: [...this.jobs],
       };
       const tx: AvailabilityUnitOfWork = {
+        retention: {
+          find: async (congregationId, id) =>
+            congregationId === scope
+              ? (this.disposals.get(key(scope, id, 0)) ?? null)
+              : null,
+          discardOccurrence: async (request) => {
+            if (request.congregationId !== scope)
+              throw new Error('Wrong scope');
+            const id = key(scope, request.occurrenceId, 0),
+              previous = this.disposals.get(id);
+            if (
+              previous &&
+              (previous.sourceVersion !== request.sourceVersion ||
+                previous.terminal !== request.terminal)
+            )
+              throw new AvailabilityError('VERSION_CONFLICT');
+            this.disposals.set(id, previous ?? request);
+            for (const [k, plan] of this.plans)
+              if (
+                plan.toRecord().congregationId === scope &&
+                plan.toRecord().occurrenceId === request.occurrenceId
+              )
+                this.plans.delete(k);
+            this.events = this.events.filter(
+              (e) =>
+                e.congregationId !== scope ||
+                e.occurrenceId !== request.occurrenceId,
+            );
+            this.jobs = this.jobs.filter(
+              (e) =>
+                e.congregationId !== scope ||
+                e.occurrenceId !== request.occurrenceId,
+            );
+            this.maintenanceEvents = this.maintenanceEvents.filter(
+              (e) =>
+                e.congregationId !== scope ||
+                e.after.id !== request.occurrenceId,
+            );
+            if (this.failDisposal) throw new Error('Disposal failed');
+          },
+        },
         members: {
           findById: async (congregationId, id) => {
             const entity = this.members.get(id);
@@ -144,7 +195,12 @@ export class AvailabilityTestEnvironment implements AvailabilityDependencies {
               );
             if (record.congregationId !== scope || record.version !== 1)
               throw new Error('Invalid scoped insert');
-            if (this.refuseInsert || this.plans.has(id)) return false;
+            if (
+              this.disposals.has(key(scope, record.occurrenceId, 0)) ||
+              this.refuseInsert ||
+              this.plans.has(id)
+            )
+              return false;
             this.plans.set(id, plan);
             return true;
           },
@@ -157,6 +213,7 @@ export class AvailabilityTestEnvironment implements AvailabilityDependencies {
               ),
               current = this.plans.get(id);
             if (
+              this.disposals.has(key(scope, record.occurrenceId, 0)) ||
               this.refuseSave ||
               record.congregationId !== scope ||
               current?.toRecord().version !== expected
@@ -184,6 +241,9 @@ export class AvailabilityTestEnvironment implements AvailabilityDependencies {
       try {
         return await work(tx);
       } catch (error) {
+        this.disposals = snapshot.disposals;
+        this.technical = snapshot.technical;
+        this.maintenanceEvents = snapshot.maintenanceEvents;
         this.members = snapshot.members;
         this.occurrences = snapshot.occurrences;
         this.plans = snapshot.plans;
