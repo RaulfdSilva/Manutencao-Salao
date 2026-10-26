@@ -454,3 +454,9 @@ Depois de conclusão técnica ou cancelamento, eliminar convites, respostas e da
 Prever fatos por ocorrência para contabilizar manutenções programadas, concluídas e canceladas, com categoria, primeira/última agenda, situação e instantes técnicos terminais, sem armazenar respostas individuais. Não implementar o painel anual nesta etapa. A definição do ano de contabilização em remarcações entre anos ainda exige decisão; manter os fatos sem presumir um critério.
 
 Conclusão técnica ainda não foi implementada: recibos e interfaces descrevem o ponto de integração futura, sem fabricar uma conclusão. No cancelamento disponível, a transação chama o contrato de descarte e mantém a projeção técnica minimizada. O servidor/banco futuro deverá implementar descarte físico, propagação offline, retenção/expiração em backups e supressão ao restaurar. Os snapshots antigos de auditoria com atores/equipes não podem ser arquivados integralmente como controle anual; ver incompatibilidades no ADR-006.
+
+### Correção da integração de equipes — entrega 04
+
+Alterar designados ou modalidade deve reconciliar disponibilidade na mesma transação, antes do commit, sem depender apenas de processamento posterior do estado final. Retirada invalida resposta e convite; reinclusão não recupera a resposta e pode gerar convite novo conforme janela e elegibilidade. Membros continuamente elegíveis preservam respostas/convites. Janela ausente, fechada ou descartada não é criada/reaberta por essa reconciliação.
+
+A minimização de identificadores em ocorrências canceladas/encerradas, incluindo `assignedMemberIds`, `responsibleMemberIds`, snapshots, eventos, projeções e armazenamento futuro é pendência obrigatória para produção. Não apagar dados operacionais necessários de ocorrências ativas, criar conclusão fictícia ou afirmar exclusão física sem adaptadores reais. Ver ADR-006.

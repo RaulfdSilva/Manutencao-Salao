@@ -52,6 +52,8 @@ export interface MaintenanceUnitOfWork {
   readonly technicalHistory: TechnicalMaintenanceHistory;
   /** Required transaction-bound integrations, never optional/best-effort callbacks. */
   readonly lifecycle: {
+    /** Reconcile the public audience immediately in this same transaction, including closed/disposed windows. */
+    availabilityAudienceChanged(record: OccurrenceRecord): Promise<void>;
     availabilityRescheduled(input: AvailabilityReschedule): Promise<void>;
     availabilityCancelled(
       record: OccurrenceRecord,

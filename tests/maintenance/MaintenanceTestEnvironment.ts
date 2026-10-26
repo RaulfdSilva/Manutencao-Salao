@@ -50,6 +50,7 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
   rules = new Map<string, RecurrenceRule>();
   occurrences = new Map<string, MaintenanceOccurrence>();
   events: MaintenancePlanningEvent[] = [];
+  audienceChanges: string[] = [];
   technical: MaintenanceTechnicalSnapshot[] = [];
   reschedules: AvailabilityReschedule[] = [];
   rejectOccurrenceSave = false;
@@ -96,6 +97,7 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
   ): Promise<T> {
     const result = this.tail.then(async () => {
       const snapshot = {
+        audienceChanges: [...this.audienceChanges],
         technical: [...this.technical],
         reschedules: [...this.reschedules],
         rules: new Map(this.rules),
@@ -114,6 +116,9 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
           },
         },
         lifecycle: {
+          availabilityAudienceChanged: async (record) => {
+            this.audienceChanges.push(record.id);
+          },
           availabilityRescheduled: async (input) => {
             this.reschedules.push(input);
           },
@@ -228,6 +233,7 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
       try {
         return await work(tx);
       } catch (error) {
+        this.audienceChanges = snapshot.audienceChanges;
         this.technical = snapshot.technical;
         this.reschedules = snapshot.reschedules;
         this.rules = snapshot.rules;
