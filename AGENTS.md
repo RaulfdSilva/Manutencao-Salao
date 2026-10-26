@@ -47,8 +47,14 @@ Correção da auditoria final: `assignTeam`/`configure` devem chamar o hook obri
 
 ## Checklists e conclusão — entrega 05
 
-Ler ADR-007. Modelos por periodicidade usam pares tarefa/categoria e snapshots por ocorrência; nunca inventar catálogo oficial. Matriz de 30/05/2026 ainda não conferida/importada. Não criar atribuição, reserva, bloqueio, check-in ou identidade do executor. Problemas técnicos independentes não desaparecem com correção de resultado; resolver exige administrador ativo ou responsável autorizado.
+Ler ADR-007. Modelos por periodicidade usam pares tarefa/categoria e snapshots por ocorrência; nunca inventar catálogo oficial. Na entrega 05, a matriz não havia sido conferida/importada; a entrega 06 inclui a transcrição fornecida, conforme ADR-008, sem conferência visual da fotografia. Não criar atribuição, reserva, bloqueio, check-in ou identidade do executor. Problemas técnicos independentes não desaparecem com correção de resultado; resolver exige administrador ativo ou responsável autorizado.
 
 `completed` é terminal como `cancelled`, preservando diferenças do ciclo de vida. Conclusão autorizada sela checklist e registra fato anual/recibo e descarte de disponibilidade na mesma unidade de trabalho. Correção posterior só por administrador, com antes/depois, data e natureza, sem reabrir nem nova contagem anual. CAS/recibos, autorização atual e transação compartilhada são obrigatórios; testes em memória não comprovam backend, expurgo ou sincronização. Minimização de identificadores legados segue pendente obrigatória antes de produção.
 
 Cancelamento só é permitido antes de trabalho técnico. Preservar o marcador irreversível `technicalWorkRecorded` do checklist e a consulta obrigatória `technicalWork.hasRecordedWork` (inclui qualquer problema). Não derivar ausência de trabalho apenas de unfilled atual, omitir a consulta, aceitar fato do cliente ou inferir false para dados legados. Cancelamento/preenchimento/problemas compartilham coordenação transacional inclusive para linhas ausentes; CAS isolados não bastam. Trabalho interrompido segue conclusão existente, sem resolver pendências automaticamente. Ver correção nos ADRs 005/007.
+
+## Catálogo de áudio — entrega 06
+
+Ler ADR-008 e `docs/catalogs/audio-maintenance-matrix-2026.md`. O catálogo é configuração versionada, validada na fronteira Infrastructure e injetada na aplicação. Não importar JSON/Infrastructure/Zod nas camadas internas. Preservar IDs, 15 tarefas, 9 categorias e associações aprovadas; não inventar procedimentos nem acumular periodicidades. A fonte desta entrega é a transcrição do responsável, revisão de 2026; não declarar a fotografia conferida.
+
+Provisionamento exige administrador ativo, recibo idempotente e transação compartilhada com edições; cria somente modelos ausentes. Nunca sobrescrever um modelo existente, mesmo vazio ou versão 1, nem atualizar checklists materializados. Não inicializar ao importar ou executar seed sem adaptador real. Outra área não está implementada e exige evolução da identidade dos modelos atuais.

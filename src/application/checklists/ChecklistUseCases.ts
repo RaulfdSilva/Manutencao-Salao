@@ -1,3 +1,8 @@
+import { snapshotInitialCatalog } from './InitialChecklistCatalog';
+import type {
+  InitialChecklistCatalog,
+  CatalogProvisioningResult,
+} from './InitialChecklistCatalog';
 import type { Member } from '../../domain/members/Member';
 import type { MaintenanceOccurrence } from '../../domain/maintenance/MaintenanceOccurrence';
 import type { MaintenanceCategory } from '../../domain/maintenance/MaintenanceTypes';
@@ -109,6 +114,73 @@ function resultRequest(input: VerificationInput): VerificationInput {
 /** Technical operations only. Server identity and database adapters are still required. */
 export class ChecklistUseCases {
   constructor(private readonly dependencies: ChecklistDependencies) {}
+
+  /** Explicit initial provisioning from trusted configuration; never overwrites a model. */
+  provisionInitialCatalog(
+    actor: MemberActor,
+    input: InitialChecklistCatalog,
+    commandId: string,
+  ): Promise<ChecklistCommandReceipt> {
+    const catalog = snapshotInitialCatalog(input);
+    return this.command(
+      actor,
+      commandId,
+      { operation: 'initial_catalog', catalog },
+      async (_tx, member) => {
+        administrator(member);
+      },
+      async (tx) => {
+        const templates: CatalogProvisioningResult['templates'][number][] = [];
+        for (const source of catalog.templates) {
+          const existing = await tx.templates.find(
+            actor.congregationId,
+            source.category,
+          );
+          if (existing) {
+            templates.push(
+              Object.freeze({
+                category: source.category,
+                disposition: 'preserved',
+                version: existing.toRecord().version,
+              }),
+            );
+            continue;
+          }
+          const template = ChecklistTemplate.create({
+            congregationId: actor.congregationId,
+            category: source.category,
+            definitions: source.definitions,
+          });
+          if (!(await tx.templates.insertIfAbsent(template)))
+            throw new ChecklistError('VERSION_CONFLICT');
+          templates.push(
+            Object.freeze({
+              category: source.category,
+              disposition: 'created',
+              version: template.toRecord().version,
+            }),
+          );
+        }
+        if (templates.some((t) => t.disposition === 'created'))
+          await this.event(
+            tx,
+            actor.congregationId,
+            null,
+            commandId,
+            'catalog_provisioned',
+            catalog.version,
+          );
+        return {
+          catalogProvisioning: Object.freeze({
+            catalogId: catalog.catalogId,
+            version: catalog.version,
+            areaId: catalog.areaId,
+            templates: Object.freeze(templates),
+          }),
+        };
+      },
+    );
+  }
 
   saveTemplate(
     actor: MemberActor,

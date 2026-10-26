@@ -1,6 +1,6 @@
 # Arquitetura
 
-Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática, domínio/casos de uso de membros (entregas 01/02) e planejamento de manutenções (entrega 03). Não existem adaptadores de persistência, autenticação ou telas de membros.
+Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática, domínio/casos de uso de membros, planejamento, disponibilidade, checklists e conclusão técnica (entregas 01–05), além da configuração e provisionamento do catálogo de áudio (entrega 06). Não existem adaptadores de persistência, autenticação ou telas funcionais desses módulos.
 
 ## Direção das dependências
 
@@ -104,3 +104,9 @@ O adaptador em testes serializa a unidade de trabalho e injeta falhas, sem prova
 O checklist persiste `technicalWorkRecorded` junto do resultado na mesma gravação CAS. A porta obrigatória de manutenção `technicalWork.hasRecordedWork` combina esse histórico com a existência de problemas (abertos ou resolvidos), por congregação/ocorrência. O domínio só aceita cancelar com fato explicitamente negativo, obtido internamente pela aplicação. Criar/ler checklist vazio não inicia trabalho; limpar resultados não apaga o histórico.
 
 Cancelamento e preenchimento devem adquirir a mesma coordenação transacional antes das leituras, mantida até commit, inclusive para checklist/problemas ausentes. Transações READ COMMITTED com CAS separados não impedem write skew. O adaptador de testes serializa todos os módulos pela mesma fila e demonstra ambas as ordens da corrida; o banco futuro precisará de prova própria. Falhas não deixam marcador, problema, cancelamento ou descarte parcial. Restauração de registros antigos exige histórico explícito e migração confiável; sem evidência, falhar fechado. Ver ADR-005/007. Nenhum bloqueio de equipamentos ou de usuário foi criado.
+
+## Catálogo inicial de áudio — entrega 06
+
+Infrastructure contém JSON versionado, parser Zod e conversão para `InitialChecklistCatalog`, contrato interno imutável. A aplicação recebe configuração por injeção e não depende do arquivo/parser. IDs e associações expandem para `VerificationDefinition`; modelos/snapshots seguem o domínio existente, sem sistema paralelo. Somente áudio é suportado; uma área futura exigirá revisão da identidade congregação/periodicidade.
+
+`ChecklistUseCases.provisionInitialCatalog` compartilha transação, autorização e recibos existentes. Insere modelos ausentes condicionalmente, preserva todos os existentes e registra um evento técnico `catalog_provisioned` por comando com criações (version = versão do catálogo, não versão de modelo). Resultado/recibo informam versões individuais e created/preserved. Falhas revertem tudo; replays revalidam autorização e não repetem efeitos. A serialização futura deve incluir edições administrativas. Nenhum import provisiona dados; não há adaptador de persistência, seed real ou composição autenticada nesta entrega. Ver ADR-008 e documento da matriz.

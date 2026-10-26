@@ -54,3 +54,9 @@ Regressões de mudanças de equipe/modalidade devem usar `assignTeam`/`configure
 Ler ADR-007. Usar dados sintéticos explicitamente identificados nos testes; não transcrever catálogo oficial sem fonte conferida. Testar permissões atuais, versões de ocorrência/checklist/problema, repetição de comandos, snapshots de modelos, preservação de problemas, correções e rollback da conclusão incluindo histórico e retenção. Não acrescentar performer/autor, atribuição de tarefas, presença ou métricas individuais.
 
 Manter IDs opacos de comandos e recibos sem identidade de solicitante. O armazenamento futuro precisa demonstrar CAS/uniquidade e serialização comum com alterações de membros/equipe/cancelamento; fila em memória não comprova produção. Não atualizar contagem anual numa correção administrativa. Executar também exportação web, lembrando que não substitui validação Android/iOS.
+
+## Catálogo — entrega 06
+
+Ler ADR-008 e a matriz transcrita. Os testes de catálogo comparam todas as associações à lista aprovada, incluindo ausência de pares extras; não gerar o resultado esperado a partir do mesmo JSON que se quer conferir. Preservar IDs ao revisar descrições. Distinguir a transcrição recebida da conferência visual ainda pendente. Fixtures sintéticas dos módulos anteriores não são procedimentos oficiais.
+
+Testar reexecução, modelos administrativos preservados, snapshots, permissões, isolamento, inserção concorrente e rollback conjunto. Alterar versão/arquivo do catálogo não autoriza sobrescrever modelos instalados. Não criar inicialização em imports ou script que finja persistência sem adaptadores.
