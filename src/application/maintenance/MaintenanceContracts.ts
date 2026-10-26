@@ -1,3 +1,8 @@
+import type {
+  AvailabilityReschedule,
+  ResponseDeadlineDecision,
+  TechnicalMaintenanceHistory,
+} from './MaintenanceLifecycleContracts';
 import type { MemberRepository } from '../../domain/members/MemberRepository';
 import type { OccurrenceRecord } from '../../domain/maintenance/MaintenanceOccurrence';
 import type {
@@ -36,6 +41,7 @@ export type MaintenancePlanningEvent = MaintenanceEventEnvelope &
         readonly after: OccurrenceRecord;
         readonly invalidatesReminderVersionsThrough: number;
         readonly availabilityDecision: AvailabilityDecision;
+        readonly deadlineDecision: ResponseDeadlineDecision;
         readonly reconfirmationRecommended: boolean;
       }
   );
@@ -43,6 +49,17 @@ export interface MaintenanceUnitOfWork {
   readonly members: Pick<MemberRepository, 'findById'>;
   readonly rules: RecurrenceRepository;
   readonly occurrences: OccurrenceRepository;
+  readonly technicalHistory: TechnicalMaintenanceHistory;
+  /** Required transaction-bound integrations, never optional/best-effort callbacks. */
+  readonly lifecycle: {
+    /** Reconcile the public audience immediately in this same transaction, including closed/disposed windows. */
+    availabilityAudienceChanged(record: OccurrenceRecord): Promise<void>;
+    availabilityRescheduled(input: AvailabilityReschedule): Promise<void>;
+    availabilityCancelled(
+      record: OccurrenceRecord,
+      occurredAt: string,
+    ): Promise<void>;
+  };
   /** Durable audit/outbox, atomically persisted with records. No real delivery here. */
   readonly events: { append(event: MaintenancePlanningEvent): Promise<void> };
 }

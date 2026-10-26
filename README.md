@@ -1,10 +1,10 @@
 # Manutenção Salão
 
-Aplicativo móvel para organizar manutenções de uma única congregação, com escopo inicial em equipamentos de áudio. O MVP 1.0 exige preenchimento colaborativo offline, sem controle de presença, frequência ou avaliação dos voluntários. **Estágio: bootstrap, entregas 01/02 de membros e entrega 03 do planejamento de manutenções, sem integração de produção.** A única tela é uma indicação estática de inicialização.
+Aplicativo móvel para organizar manutenções de uma única congregação, com escopo inicial em equipamentos de áudio. O MVP 1.0 exige preenchimento colaborativo offline, sem controle de presença, frequência ou avaliação dos voluntários. **Estágio: bootstrap, entregas 01/02 de membros, entrega 03 do planejamento de manutenções e entrega 04 de convites/disponibilidade, sem integração de produção.** A única tela é uma indicação estática de inicialização.
 
 ## Requisitos e implementação
 
-O [PRD oficial](docs/requirements/PRD.md) define o produto pretendido; esta branch contém a base, o domínio de membros e o planejamento de manutenções. A entrega 02 permite consulta da equipe ativa por membros ativos autorizados, omitindo telefone e cadastros inativos para não administradores. Alterações de perfil, papel e situação exigem a versão esperada, com erro explícito de conflito e contrato de gravação condicional. O domínio de recorrências/ocorrências de manutenção está implementado com contratos de eventos e persistência. Revisões de séries exigem vigência explícita e preservam ciclos já materializados por uma identidade independente do dia de execução; calendário visual, offline, checklists, pendências e envio de notificações permanecem não implementados. Tema escuro e quatro abas são requisitos futuros, não o estado da tela inicial.
+O [PRD oficial](docs/requirements/PRD.md) define o produto pretendido; esta branch contém a base, o domínio de membros, o planejamento de manutenções e convites/disponibilidade. A entrega 02 permite consulta da equipe ativa por membros ativos autorizados, omitindo telefone e cadastros inativos para não administradores. Alterações de perfil, papel e situação exigem a versão esperada, com erro explícito de conflito e contrato de gravação condicional. O domínio de recorrências/ocorrências de manutenção está implementado com contratos de eventos e persistência. Revisões de séries exigem vigência explícita e preservam ciclos já materializados por uma identidade independente do dia de execução; calendário visual, offline, checklists, pendências e envio de notificações permanecem não implementados. Tema escuro e quatro abas são requisitos futuros, não o estado da tela inicial.
 
 O backend e a autenticação segura ainda precisam de decisão. Suporte completo a múltiplas congregações e áreas além do áudio estão fora do MVP. As referências a congregação nos contratos existentes não significam suporte completo a várias congregações.
 
@@ -32,7 +32,7 @@ npx expo install --check
 npm run export:web
 ```
 
-`npm run format` aplica formatação; `npm run test:watch` permite desenvolvimento contínuo. Vitest usa Node para testes TypeScript. Os testes de bootstrap verificam o runner e a configuração Expo com Zod; os testes de membros e manutenções verificam domínio e casos de uso, incluindo geração delimitada, permissões, eventos e concorrência. Não há testes de UI ou banco. A CI executa as verificações acima; build nativo e testes em dispositivo ficam para um ambiente com SDKs nativos.
+`npm run format` aplica formatação; `npm run test:watch` permite desenvolvimento contínuo. Vitest usa Node para testes TypeScript. Os testes de bootstrap verificam o runner e a configuração Expo com Zod; os testes de membros e manutenções verificam domínio e casos de uso, incluindo geração delimitada, permissões, eventos e concorrência. A entrega 04 valida convites por elegibilidade, última resposta, prazo, reabertura, exceção de indisponibilidade, reconfirmação, totais, CAS e rollback. Não há testes de UI ou banco. A CI executa as verificações acima; build nativo e testes em dispositivo ficam para um ambiente com SDKs nativos.
 
 ## Estrutura
 
@@ -61,5 +61,16 @@ A organização em camadas foi mantida; domínio e aplicação contêm as regras
 - [ADR-003 — consolidação do MVP 1.0](docs/decisions/ADR-003-mvp-1-consolidation.md)
 - [ADR-004 — consulta da equipe e concorrência otimista](docs/decisions/ADR-004-member-access-concurrency.md)
 - [ADR-005 — planejamento de manutenções](docs/decisions/ADR-005-maintenance-planning.md)
+- [ADR-006 — convites e disponibilidade](docs/decisions/ADR-006-maintenance-availability.md)
 
 Use Conventional Commits. Alterações seguem branches de tarefa e Pull Requests, sem merge automático em `main`.
+
+## Convites e disponibilidade — entrega 04
+
+`src/domain/availability` e `src/application/availability` implementam janelas por ocorrência/revisão, última resposta, consultas e eventos, com adaptador somente em testes. O administrador configura um prazo UTC explícito; administrador ou responsável vinculado pode encerrar antecipadamente e reabrir com prazo futuro. No prazo exato, respostas ordinárias já são recusadas mesmo se o worker atrasar. A exceção `yes -> no` gera aviso operacional por evento. `Sim` não designa equipe e ausência de resposta não significa recusa.
+
+O fechamento automático é contratado por comandos duráveis de servidor (`closeDue`), registrados atomicamente na configuração/reabertura; ainda não existe executor real. `refreshIn` deve participar da transação real de membros/designações/cancelamento, e `invitationIsCurrent` permite revalidar eventos antes da entrega futura. Nenhuma notificação é enviada. Reagendamento exige escolhas explícitas e independentes para respostas e prazo. Reconfirmação usa o prazo escolhido para a nova revisão; anteriores permanecem temporárias até o descarte no término/cancelamento. Reinclusão exige nova necessidade de convite, sem recuperar resposta ou obrigar manifestação para comparecer. Ver ADR-006.
+
+Os ajustes finais da entrega 04 adicionam contratos de descarte em todas as revisões e histórico técnico minimizado por manutenção para futuro controle anual. O cancelamento chama o descarte na mesma transação; o adaptador de testes demonstra o contrato, sem banco real. Conclusão técnica ainda não existe: há apenas recibo e contrato de integração futura, sem tela, painel anual ou estado fictício. Backups, sincronização pendente e snapshots antigos exigem integração de retenção descrita no ADR-006.
+
+A correção de integração de equipes torna obrigatório reconciliar disponibilidade na mesma transação de `assignTeam`/`configure` ao mudar o público. Retiradas/reinclusões não recuperam respostas ou convites antigos; membros continuamente elegíveis são preservados. Testes usam os casos de uso reais, sem refresh manual compensatório. A minimização de identificadores em ocorrências terminais e suas representações continua obrigatória antes de produção; ver ADR-006 e Segurança. Não há conclusão fictícia ou exclusão física validada.

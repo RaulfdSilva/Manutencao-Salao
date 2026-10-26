@@ -98,6 +98,7 @@ describe('approved planning and bounded generation', () => {
       { ...schedule, date: '2026-12-01' },
       'preserve',
       1,
+      { kind: 'keep', expectedVersion: null },
     );
     await useCases.cancel(admin, second.id, 1);
     const count = environment.events.length;
@@ -305,7 +306,10 @@ describe('administrative permissions and isolation', () => {
     {
       name: 'reschedule',
       run: (actor: MemberActor) =>
-        useCases.reschedule(actor, 'occurrence', schedule, 'preserve', 1),
+        useCases.reschedule(actor, 'occurrence', schedule, 'preserve', 1, {
+          kind: 'keep',
+          expectedVersion: null,
+        }),
     },
     {
       name: 'cancel',
@@ -412,6 +416,7 @@ describe('rescheduling, availability and definitive cancellation', () => {
         { ...schedule, date: '2026-11-14' },
         decision,
         1,
+        { kind: 'keep', expectedVersion: null },
       );
       expect(result).toMatchObject({
         reconfirmationRecommended: true,
@@ -443,6 +448,7 @@ describe('rescheduling, availability and definitive cancellation', () => {
       { ...schedule, time: '10:00' },
       'reconfirm',
       1,
+      { kind: 'keep', expectedVersion: null },
     );
     expect(result.reconfirmationRecommended).toBe(false);
     expect(result.occurrence.availabilityRevision).toBe(2);
@@ -487,7 +493,11 @@ describe('rescheduling, availability and definitive cancellation', () => {
   it('rejects every mutation of a cancelled occurrence without producing new events', async () => {
     await useCases.cancel(admin, 'occurrence', 1);
     const actions = [
-      () => useCases.reschedule(admin, 'occurrence', schedule, 'preserve', 2),
+      () =>
+        useCases.reschedule(admin, 'occurrence', schedule, 'preserve', 2, {
+          kind: 'keep',
+          expectedVersion: null,
+        }),
       () => useCases.configure(admin, 'occurrence', configuration, 2),
       () => useCases.assignTeam(admin, 'occurrence', ['member'], 2),
       () => useCases.cancel(admin, 'occurrence', 2),
@@ -509,6 +519,7 @@ describe('versions, rollback and duplicate operations', () => {
         { ...schedule, date: '2026-11-14' },
         'preserve',
         1,
+        { kind: 'keep', expectedVersion: null },
       ),
       useCases.reschedule(
         admin,
@@ -516,6 +527,7 @@ describe('versions, rollback and duplicate operations', () => {
         { ...schedule, date: '2026-11-15' },
         'reconfirm',
         1,
+        { kind: 'keep', expectedVersion: null },
       ),
     ]);
     expect(results[0].status).toBe('fulfilled');
@@ -536,7 +548,10 @@ describe('versions, rollback and duplicate operations', () => {
       new MaintenanceError('INVALID_VERSION'),
     );
     await expect(
-      useCases.reschedule(manager, 'occurrence', schedule, 'preserve', 0),
+      useCases.reschedule(manager, 'occurrence', schedule, 'preserve', 0, {
+        kind: 'keep',
+        expectedVersion: null,
+      }),
     ).rejects.toThrowError(new MaintenanceOperationError('FORBIDDEN'));
     expect(environment.events).toEqual([]);
   });
@@ -601,8 +616,16 @@ describe('versions, rollback and duplicate operations', () => {
   it('does not advance versions or create events for true no-ops', async () => {
     const original = await useCases.get(admin, 'occurrence');
     expect(
-      (await useCases.reschedule(admin, 'occurrence', schedule, 'preserve', 1))
-        .occurrence,
+      (
+        await useCases.reschedule(
+          admin,
+          'occurrence',
+          schedule,
+          'preserve',
+          1,
+          { kind: 'keep', expectedVersion: null },
+        )
+      ).occurrence,
     ).toEqual(original);
     expect(
       await useCases.configure(admin, 'occurrence', configuration, 1),

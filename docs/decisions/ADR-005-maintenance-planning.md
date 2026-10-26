@@ -86,3 +86,11 @@ Manter disponibilidade e eventos por contrato evita construir os módulos seguin
 Testes unitários cobrem categorias, datas inválidas, meses/anos/ano bissexto, primeiro/terceiro fim de semana e domingo dia 1, políticas de mês curto, geração por intervalos repetidos/sobrepostos, preservação de ocorrências remarcadas/canceladas, permissões, quantidades, equipes, revisão de disponibilidade, eventos, cancelamento definitivo, CAS, isolamento e rollback. As regressões de membros/bootstrap e da entrega inicial devem continuar passando. Testes da correção cobrem revisões das quatro categorias, vigência, histórico, preservação de futuros materializados, mudanças de mês/ano, ciclos omitidos, colisões legítimas de datas, concorrência, CAS e rollback parcial.
 
 A autorização real, implementação do armazenamento condicional/único e da outbox, retirada de designações por desativação, resolução de DST, notificações, Hourglass, dispositivos e sincronização exigem adaptadores e testes próprios. A autoria dos eventos serve à auditoria técnica, sem controle de frequência, ranking ou avaliação dos voluntários. Não há declaração de segurança ou operação offline de produção concluída.
+
+## Evolução na entrega 04
+
+O ADR-006 implementa domínio/aplicação de convites e respostas sobre `availabilityRevision`, sem alterar os contratos de identidade/ciclos deste ADR. As referências acima à ausência de respostas descrevem o limite da entrega 03 original. Janela e respostas possuem agregado e versão próprios; os futuros adaptadores devem compartilhar a transação de elegibilidade com membros/manutenções. Eventos de reagendamento continuam registrando a escolha explícita de preservar/reconfirmar.
+
+## Decisões finais da entrega 04
+
+Reagendamento agora exige também uma escolha explícita de prazo, independente de preservar/reconfirmar respostas, com atualização transacional da janela. O cancelamento chama retenção de disponibilidade e registra projeção técnica sem membros para controle anual futuro. Os snapshots integrais de atores/equipes descritos na entrega 03 não devem ser tratados como arquivo anual permanente; a minimização de armazenamento está contratada no ADR-006. Nenhum estado completed ou encerramento técnico fictício foi adicionado. Identidade/ciclos, cancelamento definitivo e dados técnicos da ocorrência permanecem preservados.

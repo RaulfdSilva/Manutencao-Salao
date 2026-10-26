@@ -86,6 +86,7 @@ Ao remarcar uma manutenção, o sistema deverá:
 3. Invalidar os agendamentos antigos.
 4. Avisar os envolvidos.
 5. Perguntar ao administrador se deseja manter as respostas de disponibilidade ou solicitar nova confirmação.
+6. Exigir a escolha explícita de manter o prazo de respostas ou definir outro, independente da escolha das respostas. Não recalcular automaticamente.
 
 Quando houver mudança de dia, o aplicativo recomendará uma nova confirmação.
 
@@ -141,6 +142,8 @@ As respostas disponíveis serão:
 
 A ausência de resposta não deve ser interpretada como recusa.
 
+**Esclarecimentos aprovados na Implementação 04:** em participação aberta todos os membros ativos elegíveis podem receber convite e responder, sem obrigação de resposta para participar. Em equipe designada somente designados atualmente ativos recebem convite de participação e registram respostas, inclusive quando administradores ou responsáveis. As permissões existentes de consulta do calendário e organização da equipe permanecem. Responder Sim não cria designação automática.
+
 O membro poderá alterar sua resposta. Se alguém designado deixar de estar disponível, o responsável receberá um aviso para reorganizar a equipe.
 
 ### Prazos
@@ -149,6 +152,10 @@ O membro poderá alterar sua resposta. Se alguém designado deixar de estar disp
 - Prazo de resposta sugerido: cinco dias antes da manutenção.
 - Possibilidade de ajustar o prazo em uma ocorrência.
 - Possibilidade de encerrar antecipadamente ou reabrir as respostas.
+
+A janela encerra automaticamente no prazo, independentemente de abrir o aplicativo. Administradores e responsáveis autorizados daquela manutenção podem encerrar antecipadamente ou reabrir. Exceção aprovada: depois do fechamento, quem havia respondido Sim pode alterar para Não e gerar evento para alertar o responsável, sem justificativa ou interpretação negativa.
+
+Respostas acompanham `availabilityRevision`: preservar mantém validade; reconfirmar retira a validade atual das respostas anteriores, mantendo as revisões anteriores somente até o descarte obrigatório no término/cancelamento. Membros inativos, designações retiradas e ocorrências canceladas não autorizam novas respostas. Eventos representam necessidades de convite, respostas, indisponibilidade após prazo, encerramento/reabertura e mudanças de elegibilidade/reconfirmação; não significam envio de notificação.
 
 ### Painel de disponibilidade
 
@@ -402,7 +409,7 @@ Antes da implementação completa, será necessário:
 Estas notas registram a conciliação com o histórico do projeto; não acrescentam funcionalidades ao MVP nem substituem decisões pendentes do responsável.
 
 - **Fonte oficial:** as seções 1 a 14 consolidam o PRD fornecido pelo responsável em 24 de outubro de 2026. O [PRD anterior](archive/PRD-pre-MVP-1.0.md) foi preservado somente para consulta histórica; seus RF-01 a RF-24 eram uma decomposição proposta e não devem concorrer com este documento como fonte vigente.
-- **Estado atual:** existem o bootstrap, as entregas 01/02 de membros e a entrega 03 do domínio/casos de uso de planejamento de manutenções. Ainda não existem autenticação, backend, persistência local, sincronização, calendário visual, checklists, envio de notificações ou telas funcionais do MVP. A tela estática atual não representa o tema ou a navegação definitivos.
+- **Estado atual:** existem o bootstrap, as entregas 01/02 de membros, a entrega 03 do domínio/casos de uso de planejamento de manutenções e a entrega 04 de convites/disponibilidade. Ainda não existem autenticação, backend, persistência local, sincronização, calendário visual, checklists, envio de notificações ou telas funcionais do MVP. A tela estática atual não representa o tema ou a navegação definitivos.
 - **Adequação de membros — entrega 02:** `get` e `list` permitem consulta da equipe ativa por membros ativos autorizados; administradores ativos também consultam inativos e telefones. Não administradores recebem respostas sem a propriedade `phone`; consulta de inativo por não administrador retorna o mesmo erro de cadastro inexistente. Solicitantes inativos continuam sem acesso. A divergência registrada na consolidação documental foi resolvida em código/testes, sem implementar autenticação; ver [ADR-004](../decisions/ADR-004-member-access-concurrency.md).
 - **Regras anteriores complementares preservadas:** permanecem as decisões aprovadas de um papel por membro, estados `active`/`inactive`, identificador imutável, proteção do último administrador ativo, cadastro separado da identidade de acesso, ausência de login por e-mail e senha, ativação com token temporário de uso único e reativação que restaura elegibilidade sem reautorizar dispositivos explicitamente revogados. A consulta da equipe não concede acesso a membros ou dispositivos com acesso revogado.
 - **Recorrência conciliada na entrega 03:** o responsável confirmou primeiro/terceiro fins de semana com sábado de referência e possibilidade de execução no sábado ou domingo. Domingo dia 1 pertence ao mês anterior. O contrato da escala de áudio não pressupõe o formato ou API do Hourglass; essa integração permanece pendente. Ver [ADR-005](../decisions/ADR-005-maintenance-planning.md).
@@ -433,3 +440,23 @@ Administradores ativos aprovam/revisam regras e criam/geram/configuram/reagendam
 Reagendamento exige decisão explícita de preservar respostas ou reconfirmar, mantém identidade/origem e incrementa a revisão de disponibilidade apenas para reconfirmação. Trata-se de contrato para o futuro módulo de respostas, não armazenamento ou envio de respostas. Cancelamento é definitivo, afeta uma ocorrência, preserva dados técnicos e rejeita alterações posteriores. Eventos guardam estados anterior/posterior e invalidam versões antigas de lembretes; não há envio real.
 
 Alterações exigem versão esperada e gravação condicional. Eventos, dados e unicidade devem compartilhar a transação no servidor, inclusive integração futura com retirada de designações por desativação de membros. Identidade confiável, adaptadores de banco/outbox, conversão de horário civil para UTC com DST, integração Hourglass e os demais módulos continuam pendentes. Ver ADR-005 para decisões, alternativas e limites.
+
+## Entrega 04 — convites e disponibilidade
+
+Domínio e aplicação implementam janela por ocorrência/revisão, última resposta válida, prazos explícitos, fechamento lógico, comandos duráveis de encerramento, reabertura, exceção Sim para Não, planejamento agregado e indicador de confirmações abaixo do mínimo. Eventos e jobs exigem persistência atômica com CAS no futuro servidor. A criação configura prazo pelo administrador; consultas agregadas e reabertura admitem responsável vinculado. O próprio membro consulta sua resposta.
+
+Ainda não existem agendador real, backend, envio, UI ou sincronização. Reagendamento exige decisões independentes para preservar/reconfirmar respostas e manter/substituir prazo, sem cálculo automático. Administrador e responsável vinculado podem encerrar antecipadamente. Reinclusão não recupera respostas e gera nova necessidade de convite somente conforme elegibilidade e janela; não obriga responder para comparecer. Convites, respostas e disponibilidade individual são temporários e devem ser descartados no término/cancelamento em todas as revisões. Ver ADR-006.
+
+### Decisões finais da entrega 04 — retenção e controle anual
+
+Depois de conclusão técnica ou cancelamento, eliminar convites, respostas e dados individuais de disponibilidade. Preservar exclusivamente o histórico técnico/operacional necessário ao acompanhamento anual, sem presença ou métricas por pessoa. Considerar eventos com identificadores pessoais, sincronizações offline pendentes, cópias, logs e backups; não prometer limpeza instantânea de celular desconectado nem expurgo físico em banco inexistente.
+
+Prever fatos por ocorrência para contabilizar manutenções programadas, concluídas e canceladas, com categoria, primeira/última agenda, situação e instantes técnicos terminais, sem armazenar respostas individuais. Não implementar o painel anual nesta etapa. A definição do ano de contabilização em remarcações entre anos ainda exige decisão; manter os fatos sem presumir um critério.
+
+Conclusão técnica ainda não foi implementada: recibos e interfaces descrevem o ponto de integração futura, sem fabricar uma conclusão. No cancelamento disponível, a transação chama o contrato de descarte e mantém a projeção técnica minimizada. O servidor/banco futuro deverá implementar descarte físico, propagação offline, retenção/expiração em backups e supressão ao restaurar. Os snapshots antigos de auditoria com atores/equipes não podem ser arquivados integralmente como controle anual; ver incompatibilidades no ADR-006.
+
+### Correção da integração de equipes — entrega 04
+
+Alterar designados ou modalidade deve reconciliar disponibilidade na mesma transação, antes do commit, sem depender apenas de processamento posterior do estado final. Retirada invalida resposta e convite; reinclusão não recupera a resposta e pode gerar convite novo conforme janela e elegibilidade. Membros continuamente elegíveis preservam respostas/convites. Janela ausente, fechada ou descartada não é criada/reaberta por essa reconciliação.
+
+A minimização de identificadores em ocorrências canceladas/encerradas, incluindo `assignedMemberIds`, `responsibleMemberIds`, snapshots, eventos, projeções e armazenamento futuro é pendência obrigatória para produção. Não apagar dados operacionais necessários de ocorrências ativas, criar conclusão fictícia ou afirmar exclusão física sem adaptadores reais. Ver ADR-006.

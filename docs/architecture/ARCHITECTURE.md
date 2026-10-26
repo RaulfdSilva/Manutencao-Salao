@@ -66,3 +66,27 @@ Regra aprovada e ocorrência são agregados separados. A chave de geração usa 
 Eventos transacionais são o contrato de histórico técnico/outbox para invalidação de lembretes e notificação posterior. O consumidor futuro deve verificar versão/situação atual antes de enviar. Disponibilidade usa revisão para preservar ou pedir reconfirmação, sem módulo real de respostas. `AudioTeamSchedule` é porta interna de IDs da equipe, sem presumir formato/API do Hourglass e sem chamada real nesta entrega.
 
 Data, horário e fuso são explícitos; a aritmética de datas não resolve instantes UTC nem ambiguidades DST. A retirada de designações por desativação deve futuramente compartilhar uma transação com o módulo de membros, não compor dois callbacks independentes. Ver ADR-005; os contratos não provam persistência, autorização, notificações ou offline de produção.
+
+## Convites e disponibilidade — entrega 04
+
+`AvailabilityPlan` é agregado independente por congregação/ocorrência/`availabilityRevision`, com CAS próprio, janela, público reconciliado e última resposta por membro. “Sem resposta” é calculado, não um registro negativo. Domínio depende apenas de contratos/tipos internos; aplicação lê membros/ocorrências e injeta relógio e transações. Não altera a entidade de manutenção nem suas designações para responder.
+
+`AvailabilityUseCases` oferece configuração, resposta, consulta própria, totais autorizados, encerramento/reabertura e entradas confiáveis para agendamento/reconciliação. `refreshIn` recebe a unidade de trabalho compartilhada com a alteração de membro/designação/cancelamento; a futura composição deve usá-la na mesma transação, sem duas transações remotas independentes. Consultas/respostas revalidam os dados atuais. Eventos e jobs precisam ser gravados atomicamente, sem adapter de produção nesta entrega.
+
+A guarda `now >= deadline` independe de job ou UI. Jobs identificados por revisão/geração são obsoletos após reconfirmação/reabertura; executor real precisa garantir execução e retries, nunca consumir definitivamente uma entrega antecipada. Convites incluem geração de elegibilidade por destinatário; `invitationIsCurrent` revalida escopo, situação, revisão, público, prazo, geração e ausência de resposta. Fechamento seguido de reabertura registra a geração fechada e a nova geração separadamente. Ver ADR-006.
+
+## Ajustes finais de disponibilidade e retenção
+
+`MaintenanceUseCases.reschedule` exige `ResponseDeadlineDecision` além da decisão de respostas. Um hook obrigatório de `MaintenanceUnitOfWork.lifecycle` aplica janela/prazo dentro da transação existente; no cancelamento, outro hook descarta todas as revisões. Conflitos e falhas de jobs/eventos/descarte revertem também a ocorrência. `TechnicalMaintenanceHistory.record` recebe somente a projeção `MaintenanceTechnicalSnapshot`, incluindo a criação; o adaptador preserva a primeira agenda e atualiza por identidade/versão sem contar edições como novas manutenções.
+
+`AvailabilityRetention` mantém marcador terminal sem pessoa, remove janelas/convites/eventos individuais/jobs e bloqueia replay/reconfiguração. Caches, logs, cópias offline, backups e restaurações exigem implementação própria. `TechnicalCompletionReceipt`, `AvailabilityCompletionIntegration` e `AnnualMaintenanceHistory` são contratos para a conclusão técnica futura, não uma alteração artificial de `MaintenanceOccurrence.status` para completed. O estado atual só admite scheduled/cancelled. O fato anual não contém disponibilidade por pessoa; painel e critério do ano de remarcações não foram implementados.
+
+A auditoria anterior usa snapshots completos com identificadores de atores/equipes. A projeção minimizada não transforma automaticamente esses payloads em anônimos; o futuro adaptador deve minimizá-los no descarte e decidir esquema de retenção. Ver ADR-006. Alterar apenas o prazo mantém o fluxo explícito de reabrir uma janela já encerrada, sem inferir uma nova política de estado.
+
+## Reconciliação transacional de público — correção da entrega 04
+
+`assignTeam` e `configure` exigem `lifecycle.availabilityAudienceChanged` quando modalidade ou designados mudam. O adaptador liga esse hook ao `refreshIn` usando a unidade de trabalho já aberta. O fluxo mantém CAS da ocorrência, registro técnico, evento de manutenção, reconciliação/CAS da janela e eventos de disponibilidade dentro de um único commit. Nenhuma retirada/reinclusão pode desaparecer entre leituras assíncronas do estado final. Permissões, isolamento, versão esperada e rollback continuam obrigatórios no servidor.
+
+A reconciliação preserva quem continua elegível, não cria janela ausente nem revive disponibilidade descartada e só emite convite se a janela estiver aberta. Configurações sem mudança de público não a disparam. Testes de integração usam os casos de uso reais sem chamadas manuais a `refresh` para compensar o hook.
+
+**Obrigatório antes da produção:** minimizar identificadores em ocorrências terminais, especialmente `assignedMemberIds` e `responsibleMemberIds`, incluindo saídas integrais, snapshots, eventos, projeções e persistência futura. A auditoria demonstrou que referências ainda podem ser retornadas após cancelamento. Não remover dados operacionais necessários de ocorrências ativas. Sem adaptadores reais, não declarar validação de exclusão física; ver ADR-006 e SECURITY.
