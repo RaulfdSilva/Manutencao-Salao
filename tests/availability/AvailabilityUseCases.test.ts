@@ -275,7 +275,7 @@ describe('availability application', () => {
   it('suppresses invitations and new responses for cancelled maintenance while retaining technical state', async () => {
     await configure();
     await uc.respond(member, 'occurrence', 1, 'yes', version());
-    env.replaceOccurrence(current().cancel());
+    env.replaceOccurrence(current().cancel(false));
     await expect(
       uc.respond(member, 'occurrence', 1, 'no', version()),
     ).rejects.toMatchObject({ code: 'OCCURRENCE_CANCELLED' });
@@ -545,7 +545,7 @@ describe('availability application', () => {
       ),
     );
     expect(await uc.invitationIsCurrent(reopened)).toBe(false);
-    env.replaceOccurrence(current().cancel());
+    env.replaceOccurrence(current().cancel(false));
     expect(await uc.invitationIsCurrent(reopened)).toBe(false);
   });
   it('rolls back designation changes and availability reconciliation together when using the shared transaction hook', async () => {

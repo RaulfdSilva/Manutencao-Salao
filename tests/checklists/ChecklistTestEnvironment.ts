@@ -64,6 +64,7 @@ export class ChecklistTestEnvironment extends AvailabilityTestEnvironment {
   failChecklistEvents = false;
   failReceipts = false;
   failAnnual = false;
+  failTechnicalWorkRead = false;
   private sequence = 0;
   private commandSequence = 0;
   readonly dependencies: ChecklistDependencies = {
@@ -193,6 +194,19 @@ export class ChecklistTestEnvironment extends AvailabilityTestEnvironment {
             },
           },
           technicalHistory: tx.technicalHistory,
+          technicalWork: {
+            hasRecordedWork: async (congregationId, occurrenceId) => {
+              if (congregationId !== scope)
+                throw new Error('Wrong work history scope');
+              if (this.failTechnicalWorkRead)
+                throw new Error('Technical work history unavailable');
+              const checklist = await tx.checklists.find(scope, occurrenceId);
+              return (
+                checklist?.toRecord().technicalWorkRecorded === true ||
+                (await tx.problems.list(scope, occurrenceId)).length > 0
+              );
+            },
+          },
           events: {
             append: async (event) => {
               this.maintenanceEvents.push(event);
@@ -318,7 +332,8 @@ export class ChecklistTestEnvironment extends AvailabilityTestEnvironment {
           if (
             record.version !== expected + 1 ||
             record.templateVersion !== current.templateVersion ||
-            record.category !== current.category
+            record.category !== current.category ||
+            (current.technicalWorkRecorded && !record.technicalWorkRecorded)
           )
             throw new Error('Wrong checklist version/source');
           this.checklists.set(id, checklist);

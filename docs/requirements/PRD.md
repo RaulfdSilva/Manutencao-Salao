@@ -92,7 +92,11 @@ Quando houver mudança de dia, o aplicativo recomendará uma nova confirmação.
 
 ### Cancelamento
 
-O cancelamento de uma ocorrência será definitivo na primeira versão.
+O cancelamento de uma ocorrência será definitivo na primeira versão e permanece exclusivo do administrador ativo. Só é permitido enquanto a ocorrência estiver programada e nenhum trabalho técnico tiver sido registrado.
+
+Criar ou visualizar um checklist sem preenchimento não inicia os trabalhos. A primeira verificação preenchida (concluída, problema encontrado ou não se aplica) impede o cancelamento. Esse fato permanece mesmo se o resultado depois voltar para sem preenchimento. Qualquer problema técnico registrado também impede cancelar, ainda que resolvido ou que o resultado associado tenha sido alterado.
+
+Se os trabalhos forem interrompidos, administrador ativo ou responsável autorizado pode concluir a manutenção com itens incompletos e pendências abertas. Concluir não resolve automaticamente as pendências. Não há botão de início, controle de presença ou identificação individual do trabalho.
 
 - A ocorrência cancelada deixa de estar ativa.
 - Seus lembretes futuros são invalidados.
@@ -475,3 +479,9 @@ Administrador ativo ou responsável autorizado conclui a manutenção após cons
 Após conclusão, somente administrador pode corrigir resultados, preservando registro anterior/posterior, data e natureza técnica, sem reabrir ou contar outra manutenção. Problemas existentes não são apagados; sua resolução é operação independente. Não há métricas individuais ou comprovação de presença. Referências pessoais antigas em ocorrências/eventos ainda exigem minimização antes da produção.
 
 Permanecem futuras: catálogo oficial validado, banco/transações reais, backend/autorização, sincronização offline e conflitos avançados, armazenamento de fotografias, interface e minimização em snapshots/logs/backups. A regra do ano em reagendamentos entre anos segue pendente; fatos técnicos são preservados sem inventar painel ou critério de contabilização.
+
+### Correção da entrega 05 — cancelamento antes dos trabalhos
+
+`MaintenanceUseCases.cancel` consulta obrigatoriamente `technicalWork.hasRecordedWork` na mesma transação e fornece o fato à regra de domínio. Havendo trabalho registrado, a operação retorna `TECHNICAL_WORK_RECORDED` sem alterar ocorrência, histórico, eventos ou disponibilidade. O checklist preserva `technicalWorkRecorded`, booleano técnico irreversível, junto das versões e resultados; não contém data de presença ou identidade de executor. O contrato também considera qualquer problema persistido, não somente os resultados atuais.
+
+A consulta do histórico e as escritas de cancelamento/preenchimento/problemas precisam da mesma serialização no servidor, inclusive quando ainda não existe checklist. CAS por agregado isolado ou leituras READ COMMITTED sem coordenação não bastam. Testes usam uma unidade de trabalho compartilhada em memória; não demonstram banco real. Registros legados sem o novo fato exigem migração explícita baseada em evidências confiáveis; não inferir ausência de trabalho apenas por resultados atuais vazios nem liberar cancelamento com histórico desconhecido. Nenhuma migração ou saneamento de pendências legadas foi implementado.

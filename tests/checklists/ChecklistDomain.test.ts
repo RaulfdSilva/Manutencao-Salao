@@ -225,3 +225,34 @@ describe('checklist domain', () => {
     ).toThrow('INVALID_PROBLEM_STATE');
   });
 });
+
+describe('recorded technical work history', () => {
+  it('is false for a new empty checklist and true forever after a filled result', () => {
+    const initial = checklist();
+    expect(initial.toRecord().technicalWorkRecorded).toBe(false);
+    const filled = initial.recordResult(firstKey, done);
+    const cleared = filled.recordResult(firstKey, {
+      status: 'unfilled',
+      description: null,
+      photoReference: null,
+      problemId: null,
+    });
+    expect(cleared.toRecord().technicalWorkRecorded).toBe(true);
+    expect(cleared.summary().counts.unfilled).toBe(2);
+    expect(
+      MaintenanceChecklist.restore(cleared.toRecord()).toRecord()
+        .technicalWorkRecorded,
+    ).toBe(true);
+  });
+  it('rejects missing legacy history and an explicitly false marker contradicting current evidence', () => {
+    const filled = checklist().recordResult(firstKey, done).toRecord();
+    expect(() =>
+      MaintenanceChecklist.restore({ ...filled, technicalWorkRecorded: false }),
+    ).toThrow('INVALID_WORK_HISTORY');
+    const legacy = JSON.parse(JSON.stringify(checklist().toRecord()));
+    delete legacy.technicalWorkRecorded;
+    expect(() => MaintenanceChecklist.restore(legacy)).toThrow(
+      'INVALID_WORK_HISTORY',
+    );
+  });
+});

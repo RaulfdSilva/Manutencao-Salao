@@ -181,8 +181,11 @@ export class MaintenanceOccurrence {
       return this;
     return this.evolve({ assignedMemberIds: next });
   }
-  cancel(): MaintenanceOccurrence {
+  /** Application must obtain this fact from the shared transactional work history. */
+  cancel(technicalWorkRecorded: boolean): MaintenanceOccurrence {
     this.assertScheduled();
+    if (technicalWorkRecorded !== false)
+      throw new MaintenanceError('TECHNICAL_WORK_RECORDED');
     return this.evolve({ status: 'cancelled' });
   }
   complete(): MaintenanceOccurrence {

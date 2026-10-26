@@ -50,6 +50,19 @@ export interface MaintenanceUnitOfWork {
   readonly rules: RecurrenceRepository;
   readonly occurrences: OccurrenceRepository;
   readonly technicalHistory: TechnicalMaintenanceHistory;
+  /**
+   * Mandatory scoped history query in THIS transaction: true if a checklist has
+   * ever had a filled verification OR any technical problem exists, resolved or not.
+   * Creating/viewing an unfilled checklist or adding definitions alone is false.
+   * Never derive this solely from current results. Unknown legacy history must fail closed.
+   * Hold the shared congregation/occurrence lock through commit, even with no checklist.
+   */
+  readonly technicalWork: {
+    hasRecordedWork(
+      congregationId: string,
+      occurrenceId: string,
+    ): Promise<boolean>;
+  };
   /** Required transaction-bound integrations, never optional/best-effort callbacks. */
   readonly lifecycle: {
     /** Reconcile the public audience immediately in this same transaction, including closed/disposed windows. */
@@ -67,7 +80,10 @@ export interface MaintenanceTransactions {
   /**
    * Trusted server boundary. Serialize by congregation, including member/role
    * reads, rule revision and unique cycle insertion. Roll back records AND events on failure.
-   * Must share the server transaction with member deactivation/assignment removal.
+   * Must share the server transaction with member deactivation/assignment removal
+   * AND checklist/result/problem writes. Acquire the same coordination lock before
+   * reads and hold through commit, including absent checklist/problem rows. Separate
+   * row CAS under READ COMMITTED does not prevent cancellation/write skew.
    */
   run<T>(
     congregationId: string,

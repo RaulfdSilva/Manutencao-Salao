@@ -22,7 +22,7 @@ export interface MaintenanceChecklistRepository {
   ): Promise<MaintenanceChecklist | null>;
   /** Unique congregation/occurrence. Never replace an existing snapshot. */
   insertIfAbsent(checklist: MaintenanceChecklist): Promise<boolean>;
-  /** Atomic scoped CAS, immutable source/identity; version = expected + 1; no writes on false. */
+  /** Atomic scoped CAS, immutable source/identity; technicalWorkRecorded is monotonic (never true -> false); version = expected + 1; no writes on false. */
   saveIfVersion(
     checklist: MaintenanceChecklist,
     expected: number,

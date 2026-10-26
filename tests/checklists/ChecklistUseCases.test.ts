@@ -836,7 +836,6 @@ describe('technical completion and administrative corrections', () => {
   });
   it('protects cancelled occurrences from all late mutations', async () => {
     await env.setup();
-    const id = await problem();
     await env.maintenanceService.cancel(admin, 'occurrence', 1);
     await expect(fill()).rejects.toMatchObject({
       code: 'OCCURRENCE_CANCELLED',
@@ -856,12 +855,7 @@ describe('technical completion and administrative corrections', () => {
         env.command(),
       ),
     ).rejects.toMatchObject({ code: 'OCCURRENCE_CANCELLED' });
-    await expect(
-      env.service.resolveProblem(admin, id, 1, env.command()),
-    ).rejects.toMatchObject({ code: 'OCCURRENCE_CANCELLED' });
-    expect(
-      (await env.service.listProblems(admin, 'occurrence', false))[0]?.status,
-    ).toBe('pending');
+    expect(await env.service.listProblems(admin, 'occurrence')).toEqual([]);
   });
   it('does not recreate or replace a completed recurrence cycle during later generation', async () => {
     await env.service.saveTemplate(

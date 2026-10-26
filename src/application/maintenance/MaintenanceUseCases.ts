@@ -374,7 +374,13 @@ export class MaintenanceUseCases {
       occurrenceId,
       expectedVersion,
       'occurrence_cancelled',
-      (occurrence) => occurrence.cancel(),
+      async (occurrence, tx) =>
+        occurrence.cancel(
+          await tx.technicalWork.hasRecordedWork(
+            actor.congregationId,
+            occurrenceId,
+          ),
+        ),
     );
   }
   configure(
@@ -411,7 +417,10 @@ export class MaintenanceUseCases {
     id: string,
     expectedVersion: number,
     kind: 'occurrence_cancelled' | 'occurrence_configured' | 'team_changed',
-    transform: (before: MaintenanceOccurrence) => MaintenanceOccurrence,
+    transform: (
+      before: MaintenanceOccurrence,
+      tx: MaintenanceUnitOfWork,
+    ) => MaintenanceOccurrence | Promise<MaintenanceOccurrence>,
   ): Promise<OccurrenceRecord> {
     return this.change(
       actor,
@@ -419,7 +428,7 @@ export class MaintenanceUseCases {
       expectedVersion,
       kind === 'team_changed' ? 'team_manager' : 'administrator',
       async (tx, before) => {
-        const after = transform(before);
+        const after = await transform(before, tx);
         if (after === before) return before.toRecord();
         if (kind === 'occurrence_configured') {
           await validateConfiguration(

@@ -1,4 +1,5 @@
 export type ChecklistErrorCode =
+  | 'INVALID_WORK_HISTORY'
   | 'INVALID_PROBLEM_STATE'
   | 'FORBIDDEN'
   | 'NOT_FOUND'

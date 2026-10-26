@@ -58,7 +58,7 @@ export interface ChecklistUnitOfWork {
   readonly events: { append(event: ChecklistTechnicalEvent): Promise<void> };
 }
 export interface ChecklistDependencies {
-  /** Shared server serialization with maintenance, availability and members. Roll back EVERY write, receipt, annual fact and retention operation on any failure. */
+  /** Shared server serialization with maintenance, availability and members. Acquire the same congregation/occurrence coordination lock before reads and hold through commit, including absent rows, to prevent cancellation racing a result/problem insertion. Separate aggregate CAS under READ COMMITTED is insufficient. Roll back EVERY write, receipt, annual fact and retention operation on any failure. */
   readonly transactions: {
     run<T>(
       scope: string,

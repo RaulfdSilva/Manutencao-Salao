@@ -42,6 +42,7 @@ export interface MaintenanceChecklistRecord {
   readonly occurrenceId: string;
   readonly category: MaintenanceCategory;
   readonly templateVersion: number;
+  readonly technicalWorkRecorded: boolean;
   readonly version: number;
   readonly verifications: readonly Verification[];
   readonly completion: {
@@ -84,6 +85,15 @@ export class MaintenanceChecklist {
     [record.congregationId, record.occurrenceId].forEach(assertIdentifier);
     [record.version, record.templateVersion].forEach(assertVersion);
     assertCategory(record.category);
+    if (
+      typeof record.technicalWorkRecorded !== 'boolean' ||
+      (!record.technicalWorkRecorded &&
+        record.verifications.some(
+          (entry) =>
+            entry.result.status !== 'unfilled' || entry.problemIds.length > 0,
+        ))
+    )
+      throw new ChecklistError('INVALID_WORK_HISTORY');
     let completion: MaintenanceChecklistRecord['completion'] = null;
     if (record.completion !== null) {
       instant(record.completion.completedAt);
@@ -112,6 +122,7 @@ export class MaintenanceChecklist {
       occurrenceId: record.occurrenceId,
       category: record.category,
       templateVersion: record.templateVersion,
+      technicalWorkRecorded: record.technicalWorkRecorded,
       version: record.version,
       verifications: freezeVerifications(record.verifications),
       completion,
@@ -129,6 +140,7 @@ export class MaintenanceChecklist {
       occurrenceId,
       category: source.category,
       templateVersion: source.version,
+      technicalWorkRecorded: false,
       version: 1,
       completion: null,
       corrections: [],
@@ -246,6 +258,8 @@ export class MaintenanceChecklist {
         : [...previous.problemIds, result.problemId];
     const after = { ...previous, result, problemIds };
     return this.evolve({
+      technicalWorkRecorded:
+        this.record.technicalWorkRecorded || result.status !== 'unfilled',
       verifications: this.record.verifications.map((v) =>
         v.key === key ? after : v,
       ),
@@ -253,7 +267,10 @@ export class MaintenanceChecklist {
   }
   private evolve(
     changes: Partial<
-      Pick<MaintenanceChecklistRecord, 'verifications' | 'completion'>
+      Pick<
+        MaintenanceChecklistRecord,
+        'verifications' | 'completion' | 'technicalWorkRecorded'
+      >
     >,
   ): MaintenanceChecklist {
     return new MaintenanceChecklist({
