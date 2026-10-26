@@ -15,7 +15,9 @@ export type MaintenanceErrorCode =
   | 'INVALID_VERSION'
   | 'INVALID_AVAILABILITY_DECISION'
   | 'INVALID_STATUS'
+  | 'TECHNICAL_WORK_RECORDED'
   | 'OCCURRENCE_CANCELLED'
+  | 'OCCURRENCE_COMPLETED'
   | 'TEAM_NOT_ALLOWED';
 
 export class MaintenanceError extends Error {

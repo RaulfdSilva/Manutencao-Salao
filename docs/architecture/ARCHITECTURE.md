@@ -90,3 +90,17 @@ A auditoria anterior usa snapshots completos com identificadores de atores/equip
 A reconciliação preserva quem continua elegível, não cria janela ausente nem revive disponibilidade descartada e só emite convite se a janela estiver aberta. Configurações sem mudança de público não a disparam. Testes de integração usam os casos de uso reais sem chamadas manuais a `refresh` para compensar o hook.
 
 **Obrigatório antes da produção:** minimizar identificadores em ocorrências terminais, especialmente `assignedMemberIds` e `responsibleMemberIds`, incluindo saídas integrais, snapshots, eventos, projeções e persistência futura. A auditoria demonstrou que referências ainda podem ser retornadas após cancelamento. Não remover dados operacionais necessários de ocorrências ativas. Sem adaptadores reais, não declarar validação de exclusão física; ver ADR-006 e SECURITY.
+
+## Checklists e conclusão técnica — ADR-007
+
+`domain/checklists` contém ChecklistTemplate, MaintenanceChecklist, TechnicalProblem, tipos, erros e portas de repositório. `application/checklists` contém ChecklistUseCases e contratos da unidade de trabalho. Modelos usam pares tarefa/categoria e versões; snapshots protegem checklists existentes. Problemas independentes preservam histórico mesmo quando o resultado é corrigido. Não há campos de executor, atribuição ou presença.
+
+A conclusão introduz `completed` como estado terminal real. A unidade de trabalho compartilha membros/ocorrências/checklists/problemas, recibos idempotentes, histórico anual, retenção e eventos técnicos. Concluir sela resultados e registra hora real no snapshot/recibo anual; correção administrativa preserva antes/depois sem nova conclusão. Todos os efeitos e CAS são atômicos por contrato, com rollback. O adaptador deve coordenar leituras de autorização/estado com escritas concorrentes; CAS isolado do checklist não basta. `refresh` recusa reconstrução de disponibilidade para concluídas sem marcador terminal.
+
+O adaptador em testes serializa a unidade de trabalho e injeta falhas, sem provar atomicidade entre processos. Não há banco, transporte, autenticação ou sincronização offline. Versões são conservadoras por agregado, não resolução avançada por item. Fotos são referências opacas; matriz oficial ainda não foi importada/validada. Histórico anual mantém fatos por ocorrência sem pessoas e sem decidir o ano de remarcações entre anos.
+
+### Cancelamento e registro irreversível de trabalho técnico
+
+O checklist persiste `technicalWorkRecorded` junto do resultado na mesma gravação CAS. A porta obrigatória de manutenção `technicalWork.hasRecordedWork` combina esse histórico com a existência de problemas (abertos ou resolvidos), por congregação/ocorrência. O domínio só aceita cancelar com fato explicitamente negativo, obtido internamente pela aplicação. Criar/ler checklist vazio não inicia trabalho; limpar resultados não apaga o histórico.
+
+Cancelamento e preenchimento devem adquirir a mesma coordenação transacional antes das leituras, mantida até commit, inclusive para checklist/problemas ausentes. Transações READ COMMITTED com CAS separados não impedem write skew. O adaptador de testes serializa todos os módulos pela mesma fila e demonstra ambas as ordens da corrida; o banco futuro precisará de prova própria. Falhas não deixam marcador, problema, cancelamento ou descarte parcial. Restauração de registros antigos exige histórico explícito e migração confiável; sem evidência, falhar fechado. Ver ADR-005/007. Nenhum bloqueio de equipamentos ou de usuário foi criado.

@@ -110,6 +110,8 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
         this.occurrences.set(occurrence.id, occurrence);
       };
       const tx: MaintenanceUnitOfWork = {
+        // This planning-only adapter has no checklist or technical problem records.
+        technicalWork: { hasRecordedWork: async () => false },
         technicalHistory: {
           record: async (snapshot) => {
             this.technical.push(snapshot);

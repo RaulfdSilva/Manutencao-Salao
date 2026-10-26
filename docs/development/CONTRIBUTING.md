@@ -48,3 +48,9 @@ Preservar os testes de modalidades, prazo exato, exceção Sim para Não, reconf
 Nos ajustes finais da entrega 04, revisar a matriz preservar/reconfirmar × manter/substituir prazo, versões de ambos os agregados e rollback conjunto. Hooks de ciclo de vida e histórico técnico são obrigatórios; adaptadores não podem ignorar descarte ou copiar payloads pessoais para o arquivo anual. Os exemplos de cancelamento em memória testam contratos, nunca exclusão física ou conclusão técnica real.
 
 Regressões de mudanças de equipe/modalidade devem usar `assignTeam`/`configure` e o hook real de reconciliação na mesma unidade de trabalho. Não chamar `refresh` manualmente para fazer passar essas regressões. Testar retirada/reinclusão, preservação dos continuamente elegíveis, falha de CAS/outbox, conflitos e rollback conjunto. A minimização de identificadores em ocorrências terminais é requisito antes de produção e exige testes dos adaptadores reais.
+
+## Checklists — entrega 05
+
+Ler ADR-007. Usar dados sintéticos explicitamente identificados nos testes; não transcrever catálogo oficial sem fonte conferida. Testar permissões atuais, versões de ocorrência/checklist/problema, repetição de comandos, snapshots de modelos, preservação de problemas, correções e rollback da conclusão incluindo histórico e retenção. Não acrescentar performer/autor, atribuição de tarefas, presença ou métricas individuais.
+
+Manter IDs opacos de comandos e recibos sem identidade de solicitante. O armazenamento futuro precisa demonstrar CAS/uniquidade e serialização comum com alterações de membros/equipe/cancelamento; fila em memória não comprova produção. Não atualizar contagem anual numa correção administrativa. Executar também exportação web, lembrando que não substitui validação Android/iOS.

@@ -19,7 +19,7 @@ export interface OccurrenceRepository {
     congregationId: string,
     occurrenceId: string,
   ): Promise<MaintenanceOccurrence | null>;
-  /** Filter by current scheduled civil date, including cancelled records for history. */
+  /** Filter by current scheduled civil date, including cancelled/completed records for history. */
   list(
     congregationId: string,
     range: DateRange,
@@ -29,7 +29,7 @@ export interface OccurrenceRepository {
   /**
    * Atomically enforce unique (congregationId, source.ruleId, source.cycleKey).
    * Return the EXISTING record unchanged if the cycle exists, even if rescheduled
-   * or cancelled. Identifier collisions with other sources must be errors.
+   * or cancelled/completed. Identifier collisions with other sources must be errors.
    */
   insertGeneratedIfAbsent(occurrence: MaintenanceOccurrence): Promise<{
     readonly inserted: boolean;

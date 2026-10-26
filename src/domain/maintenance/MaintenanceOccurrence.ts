@@ -31,7 +31,7 @@ export interface OccurrenceRecord {
   readonly schedule: MaintenanceSchedule;
   readonly configuration: MaintenanceConfiguration;
   readonly assignedMemberIds: readonly string[];
-  readonly status: 'scheduled' | 'cancelled';
+  readonly status: 'scheduled' | 'cancelled' | 'completed';
   readonly availabilityRevision: number;
   readonly version: number;
 }
@@ -47,7 +47,7 @@ export class MaintenanceOccurrence {
     assertCategory(record.category);
     assertVersion(record.version);
     assertVersion(record.availabilityRevision);
-    if (!['scheduled', 'cancelled'].includes(record.status))
+    if (!['scheduled', 'cancelled', 'completed'].includes(record.status))
       throw new MaintenanceError('INVALID_STATUS');
     const configuration = freezeConfiguration(record.configuration);
     const assignedMemberIds = freezeIds(record.assignedMemberIds);
@@ -130,7 +130,7 @@ export class MaintenanceOccurrence {
     );
   }
   planningWarning(): 'below_minimum' | null {
-    if (this.record.status === 'cancelled') return null;
+    if (this.record.status !== 'scheduled') return null;
     return this.record.configuration.participationMode === 'assigned'
       ? assessPlannedParticipation(
           this.record.configuration.quantities,
@@ -181,11 +181,20 @@ export class MaintenanceOccurrence {
       return this;
     return this.evolve({ assignedMemberIds: next });
   }
-  cancel(): MaintenanceOccurrence {
+  /** Application must obtain this fact from the shared transactional work history. */
+  cancel(technicalWorkRecorded: boolean): MaintenanceOccurrence {
     this.assertScheduled();
+    if (technicalWorkRecorded !== false)
+      throw new MaintenanceError('TECHNICAL_WORK_RECORDED');
     return this.evolve({ status: 'cancelled' });
   }
+  complete(): MaintenanceOccurrence {
+    this.assertScheduled();
+    return this.evolve({ status: 'completed' });
+  }
   private assertScheduled(): void {
+    if (this.record.status === 'completed')
+      throw new MaintenanceError('OCCURRENCE_COMPLETED');
     if (this.record.status === 'cancelled')
       throw new MaintenanceError('OCCURRENCE_CANCELLED');
   }

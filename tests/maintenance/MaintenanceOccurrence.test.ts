@@ -72,9 +72,17 @@ describe('maintenance occurrence', () => {
       original.reschedule(schedule, 'delete' as AvailabilityDecision),
     ).toThrowError(new MaintenanceError('INVALID_AVAILABILITY_DECISION'));
   });
+  it('requires a negative transactional work-history fact to cancel a scheduled occurrence', () => {
+    const original = occurrence();
+    expect(() => original.cancel(true)).toThrowError(
+      new MaintenanceError('TECHNICAL_WORK_RECORDED'),
+    );
+    expect(original.toRecord().status).toBe('scheduled');
+    expect(original.cancel(false).toRecord().status).toBe('cancelled');
+  });
   it('cancels definitively without erasing technical data or team configuration', () => {
     const original = occurrence().assignTeam(['member']);
-    const cancelled = original.cancel();
+    const cancelled = original.cancel(false);
     expect(cancelled.toRecord()).toEqual({
       ...original.toRecord(),
       version: 3,
@@ -82,7 +90,7 @@ describe('maintenance occurrence', () => {
     });
     expect(cancelled.canParticipate(member('member'))).toBe(false);
     for (const mutate of [
-      () => cancelled.cancel(),
+      () => cancelled.cancel(false),
       () => cancelled.reschedule(schedule, 'preserve'),
       () => cancelled.configure(configuration),
       () => cancelled.assignTeam([]),
@@ -201,7 +209,7 @@ describe('maintenance occurrence', () => {
       ...original.toRecord(),
       version: Number.MAX_SAFE_INTEGER,
     });
-    expect(() => last.cancel()).toThrowError(
+    expect(() => last.cancel(false)).toThrowError(
       new MaintenanceError('INVALID_VERSION'),
     );
   });

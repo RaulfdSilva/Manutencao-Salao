@@ -92,7 +92,11 @@ Quando houver mudança de dia, o aplicativo recomendará uma nova confirmação.
 
 ### Cancelamento
 
-O cancelamento de uma ocorrência será definitivo na primeira versão.
+O cancelamento de uma ocorrência será definitivo na primeira versão e permanece exclusivo do administrador ativo. Só é permitido enquanto a ocorrência estiver programada e nenhum trabalho técnico tiver sido registrado.
+
+Criar ou visualizar um checklist sem preenchimento não inicia os trabalhos. A primeira verificação preenchida (concluída, problema encontrado ou não se aplica) impede o cancelamento. Esse fato permanece mesmo se o resultado depois voltar para sem preenchimento. Qualquer problema técnico registrado também impede cancelar, ainda que resolvido ou que o resultado associado tenha sido alterado.
+
+Se os trabalhos forem interrompidos, administrador ativo ou responsável autorizado pode concluir a manutenção com itens incompletos e pendências abertas. Concluir não resolve automaticamente as pendências. Não há botão de início, controle de presença ou identificação individual do trabalho.
 
 - A ocorrência cancelada deixa de estar ativa.
 - Seus lembretes futuros são invalidados.
@@ -187,6 +191,7 @@ A alteração dos modelos recorrentes será controlada pelo administrador.
 
 ### Resultados de uma tarefa
 
+- Sem preenchimento.
 - Concluída sem problema.
 - Problema encontrado.
 - Não se aplica.
@@ -231,7 +236,7 @@ Não haverá:
 - Cobrança de atualizações.
 - Controle de produtividade individual.
 
-A permissão exata para marcar uma pendência como concluída ainda precisa de confirmação.
+Somente administrador ativo ou responsável autorizado daquela manutenção pode marcar uma pendência como concluída, inclusive após a conclusão técnica da manutenção.
 
 ## 8. Notificações
 
@@ -386,7 +391,7 @@ Antes da implementação completa, será necessário:
 1. Conferir e transcrever integralmente o checklist da organização.
 2. Definir como obter ou importar a escala quinzenal do Hourglass.
 3. Definir o backend, a autenticação e a ativação segura dos dispositivos.
-4. Confirmar quem poderá marcar pendências como concluídas.
+4. Implementar no servidor a autorização aprovada de resolução de pendências (administrador ou responsável autorizado).
 5. Definir limites e armazenamento de fotografias offline.
 6. Detalhar o tratamento de conflitos e o encerramento de checklists compartilhados.
 
@@ -409,7 +414,7 @@ Antes da implementação completa, será necessário:
 Estas notas registram a conciliação com o histórico do projeto; não acrescentam funcionalidades ao MVP nem substituem decisões pendentes do responsável.
 
 - **Fonte oficial:** as seções 1 a 14 consolidam o PRD fornecido pelo responsável em 24 de outubro de 2026. O [PRD anterior](archive/PRD-pre-MVP-1.0.md) foi preservado somente para consulta histórica; seus RF-01 a RF-24 eram uma decomposição proposta e não devem concorrer com este documento como fonte vigente.
-- **Estado atual:** existem o bootstrap, as entregas 01/02 de membros, a entrega 03 do domínio/casos de uso de planejamento de manutenções e a entrega 04 de convites/disponibilidade. Ainda não existem autenticação, backend, persistência local, sincronização, calendário visual, checklists, envio de notificações ou telas funcionais do MVP. A tela estática atual não representa o tema ou a navegação definitivos.
+- **Estado atual:** existem o bootstrap, as entregas 01/02 de membros, a entrega 03 do domínio/casos de uso de planejamento de manutenções, a entrega 04 de convites/disponibilidade e a entrega 05 de checklists, pendências e conclusão técnica. Ainda não existem autenticação, backend, persistência local, sincronização, calendário visual, envio de notificações ou telas funcionais do MVP. A tela estática atual não representa o tema ou a navegação definitivos.
 - **Adequação de membros — entrega 02:** `get` e `list` permitem consulta da equipe ativa por membros ativos autorizados; administradores ativos também consultam inativos e telefones. Não administradores recebem respostas sem a propriedade `phone`; consulta de inativo por não administrador retorna o mesmo erro de cadastro inexistente. Solicitantes inativos continuam sem acesso. A divergência registrada na consolidação documental foi resolvida em código/testes, sem implementar autenticação; ver [ADR-004](../decisions/ADR-004-member-access-concurrency.md).
 - **Regras anteriores complementares preservadas:** permanecem as decisões aprovadas de um papel por membro, estados `active`/`inactive`, identificador imutável, proteção do último administrador ativo, cadastro separado da identidade de acesso, ausência de login por e-mail e senha, ativação com token temporário de uso único e reativação que restaura elegibilidade sem reautorizar dispositivos explicitamente revogados. A consulta da equipe não concede acesso a membros ou dispositivos com acesso revogado.
 - **Recorrência conciliada na entrega 03:** o responsável confirmou primeiro/terceiro fins de semana com sábado de referência e possibilidade de execução no sábado ou domingo. Domingo dia 1 pertence ao mês anterior. O contrato da escala de áudio não pressupõe o formato ou API do Hourglass; essa integração permanece pendente. Ver [ADR-005](../decisions/ADR-005-maintenance-planning.md).
@@ -453,10 +458,30 @@ Depois de conclusão técnica ou cancelamento, eliminar convites, respostas e da
 
 Prever fatos por ocorrência para contabilizar manutenções programadas, concluídas e canceladas, com categoria, primeira/última agenda, situação e instantes técnicos terminais, sem armazenar respostas individuais. Não implementar o painel anual nesta etapa. A definição do ano de contabilização em remarcações entre anos ainda exige decisão; manter os fatos sem presumir um critério.
 
-Conclusão técnica ainda não foi implementada: recibos e interfaces descrevem o ponto de integração futura, sem fabricar uma conclusão. No cancelamento disponível, a transação chama o contrato de descarte e mantém a projeção técnica minimizada. O servidor/banco futuro deverá implementar descarte físico, propagação offline, retenção/expiração em backups e supressão ao restaurar. Os snapshots antigos de auditoria com atores/equipes não podem ser arquivados integralmente como controle anual; ver incompatibilidades no ADR-006.
+A entrega 05 implementa a conclusão técnica no domínio e aplicação, gerando recibo de um estado `completed` efetivamente persistido pelo contrato transacional. Não há adaptador de produção. No cancelamento disponível, a transação chama o contrato de descarte e mantém a projeção técnica minimizada. O servidor/banco futuro deverá implementar descarte físico, propagação offline, retenção/expiração em backups e supressão ao restaurar. Os snapshots antigos de auditoria com atores/equipes não podem ser arquivados integralmente como controle anual; ver incompatibilidades no ADR-006.
 
 ### Correção da integração de equipes — entrega 04
 
 Alterar designados ou modalidade deve reconciliar disponibilidade na mesma transação, antes do commit, sem depender apenas de processamento posterior do estado final. Retirada invalida resposta e convite; reinclusão não recupera a resposta e pode gerar convite novo conforme janela e elegibilidade. Membros continuamente elegíveis preservam respostas/convites. Janela ausente, fechada ou descartada não é criada/reaberta por essa reconciliação.
 
 A minimização de identificadores em ocorrências canceladas/encerradas, incluindo `assignedMemberIds`, `responsibleMemberIds`, snapshots, eventos, projeções e armazenamento futuro é pendência obrigatória para produção. Não apagar dados operacionais necessários de ocorrências ativas, criar conclusão fictícia ou afirmar exclusão física sem adaptadores reais. Ver ADR-006.
+
+## Implementação 05 — decisões aprovadas de checklists e conclusão
+
+O estado atual inclui domínio, casos de uso e testes de checklists, pendências e conclusão técnica (ADR-007), sem telas ou armazenamento real. A matriz revisada em 30/05/2026 não foi localizada e conferida nesta execução; sua importação validada permanece pendente. Nenhuma tarefa oficial foi inventada.
+
+Cada par tarefa/categoria de equipamento é uma verificação independente; o futuro agrupamento visual é por categoria, sem inventário individual. O modelo é versionado por periodicidade e copiado para um snapshot da ocorrência; revisões não alteram checklists existentes. Administrador altera modelos recorrentes; administrador ou responsável vinculado acrescenta tarefas ocasionais. Não há distribuição individual, reserva, bloqueio, check-in ou identificação de quem preencheu.
+
+Resultados: sem preenchimento, concluída, problema encontrado e não se aplica. Problema exige descrição e admite referência opcional de foto futura. Repetir o mesmo comando não duplica pendências. Relatos independentes são preservados mesmo com texto igual; reutilizar explicitamente um registro requer vínculo e conteúdo compatíveis. Alterar o resultado não elimina nem resolve automaticamente problemas anteriores. Pendências possuem somente estados pendente/concluída, sem reparador obrigatório; o histórico técnico permanece.
+
+Administrador ativo ou responsável autorizado conclui a manutenção após consultar resumo com itens sem preenchimento e problemas abertos. Ambos são permitidos na conclusão. O estado `completed` é terminal: impede preenchimento comum, cancelamento, reagendamento, alterações de equipe/configuração e recriação do ciclo. Conclusão técnica, checklist selado, fato anual, eventos/recibo e descarte de disponibilidade em todas as revisões pertencem à mesma transação.
+
+Após conclusão, somente administrador pode corrigir resultados, preservando registro anterior/posterior, data e natureza técnica, sem reabrir ou contar outra manutenção. Problemas existentes não são apagados; sua resolução é operação independente. Não há métricas individuais ou comprovação de presença. Referências pessoais antigas em ocorrências/eventos ainda exigem minimização antes da produção.
+
+Permanecem futuras: catálogo oficial validado, banco/transações reais, backend/autorização, sincronização offline e conflitos avançados, armazenamento de fotografias, interface e minimização em snapshots/logs/backups. A regra do ano em reagendamentos entre anos segue pendente; fatos técnicos são preservados sem inventar painel ou critério de contabilização.
+
+### Correção da entrega 05 — cancelamento antes dos trabalhos
+
+`MaintenanceUseCases.cancel` consulta obrigatoriamente `technicalWork.hasRecordedWork` na mesma transação e fornece o fato à regra de domínio. Havendo trabalho registrado, a operação retorna `TECHNICAL_WORK_RECORDED` sem alterar ocorrência, histórico, eventos ou disponibilidade. O checklist preserva `technicalWorkRecorded`, booleano técnico irreversível, junto das versões e resultados; não contém data de presença ou identidade de executor. O contrato também considera qualquer problema persistido, não somente os resultados atuais.
+
+A consulta do histórico e as escritas de cancelamento/preenchimento/problemas precisam da mesma serialização no servidor, inclusive quando ainda não existe checklist. CAS por agregado isolado ou leituras READ COMMITTED sem coordenação não bastam. Testes usam uma unidade de trabalho compartilhada em memória; não demonstram banco real. Registros legados sem o novo fato exigem migração explícita baseada em evidências confiáveis; não inferir ausência de trabalho apenas por resultados atuais vazios nem liberar cancelamento com histórico desconhecido. Nenhuma migração ou saneamento de pendências legadas foi implementado.

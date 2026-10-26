@@ -77,6 +77,8 @@ beforeEach(() => {
                 env.technical.push(snapshot);
               },
             },
+            // This availability-only adapter has no recorded technical work.
+            technicalWork: { hasRecordedWork: async () => false },
             lifecycle: {
               availabilityAudienceChanged: (record) =>
                 availability.refreshIn(
