@@ -446,6 +446,16 @@ export class MaintenanceUseCases {
           after: after.toRecord(),
           invalidatesReminderVersionsThrough: before.version,
         });
+        const previousRecord = before.toRecord();
+        const nextRecord = after.toRecord();
+        // Observe every transition before commit; an async final-state read can miss a removal.
+        if (
+          previousRecord.configuration.participationMode !==
+            nextRecord.configuration.participationMode ||
+          JSON.stringify(previousRecord.assignedMemberIds) !==
+            JSON.stringify(nextRecord.assignedMemberIds)
+        )
+          await tx.lifecycle.availabilityAudienceChanged(nextRecord);
         if (kind === 'occurrence_cancelled')
           await tx.lifecycle.availabilityCancelled(
             after.toRecord(),

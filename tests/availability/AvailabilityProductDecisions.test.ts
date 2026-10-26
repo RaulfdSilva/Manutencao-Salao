@@ -78,6 +78,13 @@ beforeEach(() => {
               },
             },
             lifecycle: {
+              availabilityAudienceChanged: (record) =>
+                availability.refreshIn(
+                  tx,
+                  record.congregationId,
+                  record.id,
+                  record.availabilityRevision,
+                ),
               availabilityRescheduled: (input) =>
                 availability.rescheduleIn(tx, input),
               availabilityCancelled: (record, now) =>
@@ -515,4 +522,626 @@ describe('approved availability product decisions', () => {
     expect(JSON.stringify(snapshot)).not.toContain('private');
     expect(JSON.stringify(snapshot)).not.toContain('memberId');
   });
+  it('regression: assignTeam removal and reinclusion must not recover an old yes', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    await configure();
+    await availability.respond(member, 'occurrence', 1, 'yes', version());
+    await maintenance.assignTeam(admin, 'occurrence', [], current().version);
+    expect((await availability.planning(admin, 'occurrence')).totals.yes).toBe(
+      0,
+    );
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    expect((await availability.mine(member, 'occurrence')).response).toBe(
+      'unanswered',
+    );
+  });
+  it('regression: assignTeam reinclusion invalidates the old unanswered invitation', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    await configure();
+    const old = env.events.find((e) => e.kind === 'invitation_needed');
+    if (!old) throw new Error('Missing invitation');
+    await maintenance.assignTeam(admin, 'occurrence', [], current().version);
+    expect(await availability.invitationIsCurrent(old)).toBe(false);
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    expect(await availability.invitationIsCurrent(old)).toBe(false);
+    const replacement = env.events
+      .filter((e) => e.kind === 'invitation_needed')
+      .at(-1);
+    if (!replacement) throw new Error('Missing new invitation');
+    expect(replacement.id).not.toBe(old.id);
+    expect(await availability.invitationIsCurrent(replacement)).toBe(true);
+  });
+  it('regression: a new designation emits invitation-needed immediately without a response or refresh', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await configure();
+    await maintenance.assignTeam(
+      manager,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    expect(
+      env.events.filter(
+        (e) => e.kind === 'invitation_needed' && e.memberId === 'member',
+      ),
+    ).toHaveLength(1);
+  });
+  it('regression: open to assigned and back must not restore excluded responses', async () => {
+    await configure();
+    await availability.respond(member, 'occurrence', 1, 'yes', version());
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    expect(env.plan().response('member')).toBe('unanswered');
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'open' },
+      current().version,
+    );
+    expect((await availability.mine(member, 'occurrence')).response).toBe(
+      'unanswered',
+    );
+    expect((await availability.planning(admin, 'occurrence')).totals.yes).toBe(
+      0,
+    );
+  });
+  it('preserves responses and invitation tokens of continuously eligible members and deduplicates no-ops', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member', 'other'],
+      current().version,
+    );
+    await configure();
+    await availability.respond(member, 'occurrence', 1, 'yes', version());
+    const old = env.events.find(
+      (e) => e.kind === 'invitation_needed' && e.memberId === 'other',
+    );
+    if (!old) throw new Error('Missing invitation');
+    const originalToken = env
+      .plan()
+      .toRecord()
+      .invitations.find((i) => i.memberId === 'other');
+    await maintenance.assignTeam(
+      manager,
+      'occurrence',
+      ['member', 'other', 'admin'],
+      current().version,
+    );
+    expect(env.plan().response('member')).toBe('yes');
+    expect(await availability.invitationIsCurrent(old)).toBe(true);
+    expect(
+      env
+        .plan()
+        .toRecord()
+        .invitations.find((i) => i.memberId === 'other'),
+    ).toEqual(originalToken);
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member', 'other'],
+      current().version,
+    );
+    const saved = current(),
+      plan = env.plan(),
+      eventCount = env.events.length;
+    await maintenance.assignTeam(
+      manager,
+      'occurrence',
+      ['other', 'member'],
+      current().version,
+    );
+    expect(current()).toBe(saved);
+    expect(env.plan()).toBe(plan);
+    expect(env.events).toHaveLength(eventCount);
+    expect(
+      env.events.filter(
+        (e) => e.kind === 'invitation_needed' && e.memberId === 'other',
+      ),
+    ).toHaveLength(1);
+    expect(new Set(env.events.map((e) => e.id)).size).toBe(env.events.length);
+  });
+  it('does not reconcile or invalidate availability for quantities/responsibility-only configuration changes', async () => {
+    await configure();
+    await availability.respond(member, 'occurrence', 1, 'yes', version());
+    const plan = env.plan(),
+      events = [...env.events];
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      {
+        ...current().toRecord().configuration,
+        quantities: { minimum: 1, desired: 3 },
+        responsibleMemberIds: [],
+      },
+      current().version,
+    );
+    expect(env.plan()).toBe(plan);
+    expect(env.events).toEqual(events);
+    expect(env.plan().response('member')).toBe('yes');
+  });
+  it.each(['assign', 'configure'] as const)(
+    'rolls back occurrence, availability and both event streams after reconciliation failure in %s',
+    async (operation) => {
+      if (operation === 'assign') {
+        await maintenance.configure(
+          admin,
+          'occurrence',
+          {
+            ...current().toRecord().configuration,
+            participationMode: 'assigned',
+          },
+          current().version,
+        );
+        await maintenance.assignTeam(
+          admin,
+          'occurrence',
+          ['member'],
+          current().version,
+        );
+      }
+      await configure();
+      await availability.respond(member, 'occurrence', 1, 'yes', version());
+      const before = current(),
+        plan = env.plan(),
+        events = [...env.events],
+        maintenanceEvents = [...env.maintenanceEvents],
+        technical = [...env.technical],
+        jobs = [...env.jobs];
+      env.failEvents = true;
+      const action =
+        operation === 'assign'
+          ? maintenance.assignTeam(admin, 'occurrence', [], current().version)
+          : maintenance.configure(
+              admin,
+              'occurrence',
+              {
+                ...current().toRecord().configuration,
+                participationMode: 'assigned',
+              },
+              current().version,
+            );
+      await expect(action).rejects.toThrow('Event storage failed');
+      expect(current()).toBe(before);
+      expect(env.plan()).toBe(plan);
+      expect(env.events).toEqual(events);
+      expect(env.maintenanceEvents).toEqual(maintenanceEvents);
+      expect(env.technical).toEqual(technical);
+      expect(env.jobs).toEqual(jobs);
+    },
+  );
+  it('rolls back the team when availability storage rejects its conditional save', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    await configure();
+    const before = current(),
+      plan = env.plan(),
+      events = [...env.events],
+      history = [...env.technical];
+    env.refuseSave = true;
+    await expect(
+      maintenance.assignTeam(manager, 'occurrence', [], current().version),
+    ).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
+    expect(current()).toBe(before);
+    expect(env.plan()).toBe(plan);
+    expect(env.events).toEqual(events);
+    expect(env.technical).toEqual(history);
+  });
+  it('rejects stale team versions and accepts only one concurrent team change', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await configure();
+    const expected = current().version;
+    const results = await Promise.allSettled([
+      maintenance.assignTeam(manager, 'occurrence', ['member'], expected),
+      maintenance.assignTeam(admin, 'occurrence', ['other'], expected),
+    ]);
+    expect(results[0].status).toBe('fulfilled');
+    expect(results[1]).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'VERSION_CONFLICT' },
+    });
+    expect(env.plan().toRecord().audience).toEqual(['member']);
+    expect(
+      env.events.filter((e) => e.kind === 'invitation_needed'),
+    ).toHaveLength(1);
+    await expect(
+      maintenance.assignTeam(admin, 'occurrence', [], expected),
+    ).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
+  });
+  it('enforces administrator configuration and authorized active manager team permissions', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await configure();
+    env.seedMember({ id: 'other', role: 'maintenance_manager' });
+    await expect(
+      maintenance.assignTeam(
+        { ...admin, memberId: 'other' },
+        'occurrence',
+        ['member'],
+        current().version,
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(
+      maintenance.assignTeam(
+        member,
+        'occurrence',
+        ['member'],
+        current().version,
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(
+      maintenance.configure(
+        manager,
+        'occurrence',
+        { ...current().toRecord().configuration, participationMode: 'open' },
+        current().version,
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    env.seedMember({
+      id: 'manager',
+      role: 'maintenance_manager',
+      status: 'inactive',
+    });
+    await expect(
+      maintenance.assignTeam(
+        manager,
+        'occurrence',
+        ['member'],
+        current().version,
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(env.plan().toRecord().audience).toEqual([]);
+    env.seedMember({ id: 'manager', role: 'maintenance_manager' });
+    await maintenance.assignTeam(
+      manager,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    expect(env.plan().toRecord().audience).toEqual(['member']);
+  });
+  it.each(['manual', 'deadline'] as const)(
+    'updates eligibility in a %s-closed window without invitations or reopening, then invites after explicit reopen',
+    async (closure) => {
+      await maintenance.configure(
+        admin,
+        'occurrence',
+        {
+          ...current().toRecord().configuration,
+          participationMode: 'assigned',
+        },
+        current().version,
+      );
+      await configure();
+      if (closure === 'manual')
+        await availability.close(manager, 'occurrence', 1, version());
+      else env.now = deadline;
+      await maintenance.assignTeam(
+        manager,
+        'occurrence',
+        ['member'],
+        current().version,
+      );
+      expect(env.plan().toRecord().audience).toEqual(['member']);
+      expect(env.plan().isOpen(env.now)).toBe(false);
+      expect(
+        env.events.filter((e) => e.kind === 'invitation_needed'),
+      ).toHaveLength(0);
+      await maintenance.assignTeam(admin, 'occurrence', [], current().version);
+      await maintenance.assignTeam(
+        admin,
+        'occurrence',
+        ['member'],
+        current().version,
+      );
+      expect(env.plan().response('member')).toBe('unanswered');
+      await availability.reopen(manager, 'occurrence', 1, later, version());
+      const invitations = env.events.filter(
+        (e) => e.kind === 'invitation_needed',
+      );
+      expect(invitations).toHaveLength(1);
+      const invitation = invitations[0];
+      if (!invitation) throw new Error('Missing invitation');
+      expect(await availability.invitationIsCurrent(invitation)).toBe(true);
+    },
+  );
+  it('does not create a window merely because a team or mode changes', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await maintenance.assignTeam(
+      manager,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'open' },
+      current().version,
+    );
+    expect(env.plans.size).toBe(0);
+    expect(env.events).toEqual([]);
+    expect(env.jobs).toEqual([]);
+  });
+  it('reconciles only the current response revision and leaves obsolete revisions untouched until terminal disposal', async () => {
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await configure();
+    await reschedule('reconfirm', { kind: 'keep', expectedVersion: version() });
+    const previous = env.plan(1);
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    expect(env.plan(1)).toBe(previous);
+    expect(env.plan(2).toRecord().audience).toEqual(['member']);
+    expect(
+      env.events
+        .filter(
+          (e) => e.kind === 'invitation_needed' && e.memberId === 'member',
+        )
+        .map((e) => e.revision),
+    ).toEqual([2]);
+  });
+  it('keeps reconciliation isolated by congregation and rejects cross-congregation assignments', async () => {
+    await configure();
+    const original = env.plan();
+    env.seedMember({
+      id: 'foreign-admin',
+      role: 'administrator',
+      congregationId: 'foreign',
+    });
+    env.seedMember({ id: 'foreign-member', congregationId: 'foreign' });
+    const foreignAdmin = {
+      memberId: 'foreign-admin',
+      congregationId: 'foreign',
+    };
+    env.seedOccurrence({
+      id: 'foreign-occurrence',
+      congregationId: 'foreign',
+      configuration: {
+        participationMode: 'assigned',
+        responsibleMemberIds: [],
+        quantities: { minimum: null, desired: null },
+      },
+    });
+    await availability.configure(
+      foreignAdmin,
+      'foreign-occurrence',
+      deadline,
+      1,
+    );
+    await expect(
+      maintenance.assignTeam(
+        foreignAdmin,
+        'occurrence',
+        ['foreign-member'],
+        current().version,
+      ),
+    ).rejects.toMatchObject({ code: 'OCCURRENCE_NOT_FOUND' });
+    await expect(
+      maintenance.assignTeam(foreignAdmin, 'foreign-occurrence', ['member'], 1),
+    ).rejects.toMatchObject({ code: 'MEMBER_NOT_ELIGIBLE' });
+    await maintenance.assignTeam(
+      foreignAdmin,
+      'foreign-occurrence',
+      ['foreign-member'],
+      1,
+    );
+    expect(env.plan()).toBe(original);
+    expect(
+      env.plan(1, 'foreign', 'foreign-occurrence').toRecord().audience,
+    ).toEqual(['foreign-member']);
+    expect(
+      env.events
+        .filter(
+          (e) =>
+            e.kind === 'invitation_needed' && e.memberId === 'foreign-member',
+        )
+        .every((e) => e.congregationId === 'foreign'),
+    ).toBe(true);
+  });
+  it('does not recreate availability for cancelled maintenance or a retained terminal marker', async () => {
+    await configure();
+    const stale = current();
+    await maintenance.cancel(admin, 'occurrence', current().version);
+    await expect(
+      maintenance.assignTeam(admin, 'occurrence', [], current().version),
+    ).rejects.toMatchObject({ code: 'OCCURRENCE_CANCELLED' });
+    await expect(
+      maintenance.configure(
+        admin,
+        'occurrence',
+        {
+          ...current().toRecord().configuration,
+          participationMode: 'assigned',
+        },
+        current().version,
+      ),
+    ).rejects.toMatchObject({ code: 'OCCURRENCE_CANCELLED' });
+    expect(env.plans.size).toBe(0);
+    expect(env.events).toEqual([]);
+    // Simulate a stale operational row restored without removing the terminal marker.
+    env.replaceOccurrence(stale);
+    await maintenance.configure(
+      admin,
+      'occurrence',
+      { ...current().toRecord().configuration, participationMode: 'assigned' },
+      current().version,
+    );
+    await maintenance.assignTeam(
+      admin,
+      'occurrence',
+      ['member'],
+      current().version,
+    );
+    expect(env.plans.size).toBe(0);
+    expect(env.events).toEqual([]);
+    expect(env.jobs).toEqual([]);
+    expect(env.disposals.size).toBe(1);
+  });
+  it.each(['manual', 'deadline'] as const)(
+    'does not restore an old yes after removal/reinclusion in a %s-closed window',
+    async (closure) => {
+      await maintenance.configure(
+        admin,
+        'occurrence',
+        {
+          ...current().toRecord().configuration,
+          participationMode: 'assigned',
+        },
+        current().version,
+      );
+      await maintenance.assignTeam(
+        admin,
+        'occurrence',
+        ['member'],
+        current().version,
+      );
+      await configure();
+      await availability.respond(member, 'occurrence', 1, 'yes', version());
+      if (closure === 'manual')
+        await availability.close(manager, 'occurrence', 1, version());
+      else env.now = deadline;
+      const invitations = env.events.filter(
+        (e) => e.kind === 'invitation_needed',
+      ).length;
+      await maintenance.assignTeam(
+        manager,
+        'occurrence',
+        [],
+        current().version,
+      );
+      await maintenance.assignTeam(
+        manager,
+        'occurrence',
+        ['member'],
+        current().version,
+      );
+      expect(env.plan().response('member')).toBe('unanswered');
+      expect(env.plan().isOpen(env.now)).toBe(false);
+      expect(
+        env.events.filter((e) => e.kind === 'invitation_needed'),
+      ).toHaveLength(invitations);
+      await expect(
+        availability.respond(member, 'occurrence', 1, 'no', version()),
+      ).rejects.toMatchObject({ code: 'WINDOW_CLOSED' });
+    },
+  );
+  it.each([true, false])(
+    'serializes response versus removal without restoring a response: responseFirst=%s',
+    async (responseFirst) => {
+      await maintenance.configure(
+        admin,
+        'occurrence',
+        {
+          ...current().toRecord().configuration,
+          participationMode: 'assigned',
+        },
+        current().version,
+      );
+      await maintenance.assignTeam(
+        admin,
+        'occurrence',
+        ['member'],
+        current().version,
+      );
+      await configure();
+      const occurrenceVersion = current().version,
+        planVersion = version();
+      const respond = () =>
+        availability.respond(member, 'occurrence', 1, 'yes', planVersion);
+      const remove = () =>
+        maintenance.assignTeam(manager, 'occurrence', [], occurrenceVersion);
+      const results = await Promise.allSettled(
+        responseFirst ? [respond(), remove()] : [remove(), respond()],
+      );
+      expect(results[0].status).toBe('fulfilled');
+      if (responseFirst) expect(results[1].status).toBe('fulfilled');
+      else
+        expect(results[1]).toMatchObject({
+          status: 'rejected',
+          reason: { code: 'FORBIDDEN' },
+        });
+      expect(env.plan().response('member')).toBe('unanswered');
+      expect(current().toRecord().assignedMemberIds).toEqual([]);
+    },
+  );
 });
