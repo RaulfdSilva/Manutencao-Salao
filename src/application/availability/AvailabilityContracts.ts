@@ -1,3 +1,9 @@
+import {
+  assertIdentifier,
+  assertVersion,
+} from '../../domain/maintenance/MaintenanceTypes';
+import { instant } from '../../domain/availability/AvailabilityPlan';
+import type { TechnicalCompletionReceipt } from '../maintenance/MaintenanceLifecycleContracts';
 import type { MemberRepository } from '../../domain/members/MemberRepository';
 import type { OccurrenceRepository } from '../../domain/maintenance/MaintenanceRepository';
 import type { AvailabilityPlan } from '../../domain/availability/AvailabilityPlan';
@@ -22,6 +28,7 @@ export interface AvailabilityDeadline {
 }
 export type AvailabilityEventKind =
   | 'window_configured'
+  | 'deadline_changed'
   | 'invitation_needed'
   | 'response_recorded'
   | 'response_modified'
@@ -47,6 +54,7 @@ export interface AvailabilityUnitOfWork {
   readonly members: Pick<MemberRepository, 'findById' | 'list'>;
   readonly occurrences: Pick<OccurrenceRepository, 'findById'>;
   readonly availability: AvailabilityRepository;
+  readonly retention: AvailabilityRetention;
   readonly events: { append(event: AvailabilityEvent): Promise<void> };
   /** Durable upsert by scope/occurrence/revision/windowGeneration, in the SAME transaction. */
   readonly deadlines: {
@@ -73,4 +81,51 @@ export interface AvailabilityPlanning {
     Record<'yes' | 'no' | 'maybe' | 'unanswered', number>
   >;
   readonly belowMinimum: boolean;
+}
+
+/** Nonpersonal tombstone preventing replay by pending offline commands. */
+export interface AvailabilityDisposal {
+  readonly congregationId: string;
+  readonly occurrenceId: string;
+  readonly terminal: 'cancelled' | 'completed';
+  readonly sourceVersion: number;
+  readonly effectiveAt: string;
+}
+export interface AvailabilityRetention {
+  find(
+    congregationId: string,
+    occurrenceId: string,
+  ): Promise<AvailabilityDisposal | null>;
+  /**
+   * SAME transaction: tombstone + remove ALL availability revisions, invitations,
+   * individual outbox events (including personal IDs in event keys), deadline jobs
+   * and delivery projections. Keep only whitelisted operational maintenance facts.
+   * Idempotent; reject newer/conflicting terminal receipts.
+   * Real adapter propagates erasure to caches/offline queues and tracks backup
+   * expiry/restore suppression, without claiming immediate physical erasure.
+   */
+  discardOccurrence(request: AvailabilityDisposal): Promise<void>;
+}
+/** Contract only. The future completion transaction must verify the real receipt and erase atomically. */
+export interface AvailabilityCompletionIntegration {
+  afterTechnicalCompletion(
+    receipt: import('../maintenance/MaintenanceLifecycleContracts').TechnicalCompletionReceipt,
+  ): Promise<void>;
+}
+
+/** DTO conversion only: does not complete a maintenance or authenticate the receipt. */
+export function completionDisposalRequest(
+  receipt: TechnicalCompletionReceipt,
+): AvailabilityDisposal {
+  assertIdentifier(receipt.congregationId);
+  assertIdentifier(receipt.occurrenceId);
+  assertVersion(receipt.sourceVersion);
+  instant(receipt.completedAt);
+  return Object.freeze({
+    congregationId: receipt.congregationId,
+    occurrenceId: receipt.occurrenceId,
+    sourceVersion: receipt.sourceVersion,
+    effectiveAt: receipt.completedAt,
+    terminal: 'completed',
+  });
 }

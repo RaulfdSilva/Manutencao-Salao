@@ -86,6 +86,7 @@ Ao remarcar uma manutenção, o sistema deverá:
 3. Invalidar os agendamentos antigos.
 4. Avisar os envolvidos.
 5. Perguntar ao administrador se deseja manter as respostas de disponibilidade ou solicitar nova confirmação.
+6. Exigir a escolha explícita de manter o prazo de respostas ou definir outro, independente da escolha das respostas. Não recalcular automaticamente.
 
 Quando houver mudança de dia, o aplicativo recomendará uma nova confirmação.
 
@@ -152,9 +153,9 @@ O membro poderá alterar sua resposta. Se alguém designado deixar de estar disp
 - Possibilidade de ajustar o prazo em uma ocorrência.
 - Possibilidade de encerrar antecipadamente ou reabrir as respostas.
 
-A janela encerra automaticamente no prazo, independentemente de abrir o aplicativo. Administradores e responsáveis autorizados podem reabrir. Exceção aprovada: depois do fechamento, quem havia respondido Sim pode alterar para Não e gerar evento para alertar o responsável, sem justificativa ou interpretação negativa.
+A janela encerra automaticamente no prazo, independentemente de abrir o aplicativo. Administradores e responsáveis autorizados daquela manutenção podem encerrar antecipadamente ou reabrir. Exceção aprovada: depois do fechamento, quem havia respondido Sim pode alterar para Não e gerar evento para alertar o responsável, sem justificativa ou interpretação negativa.
 
-Respostas acompanham `availabilityRevision`: preservar mantém validade; reconfirmar retira a validade atual das respostas anteriores, conservando registros técnicos permitidos. Membros inativos, designações retiradas e ocorrências canceladas não autorizam novas respostas. Eventos representam necessidades de convite, respostas, indisponibilidade após prazo, encerramento/reabertura e mudanças de elegibilidade/reconfirmação; não significam envio de notificação.
+Respostas acompanham `availabilityRevision`: preservar mantém validade; reconfirmar retira a validade atual das respostas anteriores, mantendo as revisões anteriores somente até o descarte obrigatório no término/cancelamento. Membros inativos, designações retiradas e ocorrências canceladas não autorizam novas respostas. Eventos representam necessidades de convite, respostas, indisponibilidade após prazo, encerramento/reabertura e mudanças de elegibilidade/reconfirmação; não significam envio de notificação.
 
 ### Painel de disponibilidade
 
@@ -444,4 +445,18 @@ Alterações exigem versão esperada e gravação condicional. Eventos, dados e 
 
 Domínio e aplicação implementam janela por ocorrência/revisão, última resposta válida, prazos explícitos, fechamento lógico, comandos duráveis de encerramento, reabertura, exceção Sim para Não, planejamento agregado e indicador de confirmações abaixo do mínimo. Eventos e jobs exigem persistência atômica com CAS no futuro servidor. A criação configura prazo pelo administrador; consultas agregadas e reabertura admitem responsável vinculado. O próprio membro consulta sua resposta.
 
-Ainda não existem agendador real, backend, envio, UI ou sincronização. Configuração automática por categoria e recálculo de prazo após reagendamento não foram decididos/implementados. Nova revisão de disponibilidade exige uma janela explicitamente configurada; não presumir reabertura. Delegação de fechamento antecipado ao responsável, retenção técnica e recuperação de resposta após reinclusão precisam de validação; a entrega conserva revisões anteriores e invalida respostas retiradas do planejamento atual, sem recuperação automática. Ver ADR-006.
+Ainda não existem agendador real, backend, envio, UI ou sincronização. Reagendamento exige decisões independentes para preservar/reconfirmar respostas e manter/substituir prazo, sem cálculo automático. Administrador e responsável vinculado podem encerrar antecipadamente. Reinclusão não recupera respostas e gera nova necessidade de convite somente conforme elegibilidade e janela; não obriga responder para comparecer. Convites, respostas e disponibilidade individual são temporários e devem ser descartados no término/cancelamento em todas as revisões. Ver ADR-006.
+
+### Decisões finais da entrega 04 — retenção e controle anual
+
+Depois de conclusão técnica ou cancelamento, eliminar convites, respostas e dados individuais de disponibilidade. Preservar exclusivamente o histórico técnico/operacional necessário ao acompanhamento anual, sem presença ou métricas por pessoa. Considerar eventos com identificadores pessoais, sincronizações offline pendentes, cópias, logs e backups; não prometer limpeza instantânea de celular desconectado nem expurgo físico em banco inexistente.
+
+Prever fatos por ocorrência para contabilizar manutenções programadas, concluídas e canceladas, com categoria, primeira/última agenda, situação e instantes técnicos terminais, sem armazenar respostas individuais. Não implementar o painel anual nesta etapa. A definição do ano de contabilização em remarcações entre anos ainda exige decisão; manter os fatos sem presumir um critério.
+
+Conclusão técnica ainda não foi implementada: recibos e interfaces descrevem o ponto de integração futura, sem fabricar uma conclusão. No cancelamento disponível, a transação chama o contrato de descarte e mantém a projeção técnica minimizada. O servidor/banco futuro deverá implementar descarte físico, propagação offline, retenção/expiração em backups e supressão ao restaurar. Os snapshots antigos de auditoria com atores/equipes não podem ser arquivados integralmente como controle anual; ver incompatibilidades no ADR-006.
+
+### Correção da integração de equipes — entrega 04
+
+Alterar designados ou modalidade deve reconciliar disponibilidade na mesma transação, antes do commit, sem depender apenas de processamento posterior do estado final. Retirada invalida resposta e convite; reinclusão não recupera a resposta e pode gerar convite novo conforme janela e elegibilidade. Membros continuamente elegíveis preservam respostas/convites. Janela ausente, fechada ou descartada não é criada/reaberta por essa reconciliação.
+
+A minimização de identificadores em ocorrências canceladas/encerradas, incluindo `assignedMemberIds`, `responsibleMemberIds`, snapshots, eventos, projeções e armazenamento futuro é pendência obrigatória para produção. Não apagar dados operacionais necessários de ocorrências ativas, criar conclusão fictícia ou afirmar exclusão física sem adaptadores reais. Ver ADR-006.

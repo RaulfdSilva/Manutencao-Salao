@@ -152,6 +152,14 @@ export class AvailabilityPlan {
       windowGeneration: this.record.windowGeneration + 1,
     });
   }
+  changeDeadline(deadline: string): AvailabilityPlan {
+    instant(deadline);
+    if (deadline === this.record.deadline) return this;
+    return this.evolve({
+      deadline,
+      windowGeneration: this.record.windowGeneration + 1,
+    });
+  }
   reconcile(ids: readonly string[]): AvailabilityPlan {
     const audience = freezeIds(ids);
     if (JSON.stringify(audience) === JSON.stringify(this.record.audience))

@@ -1,3 +1,5 @@
+import { assertDeadlineDecision } from '../maintenance/MaintenanceLifecycleContracts';
+import type { AvailabilityReschedule } from '../maintenance/MaintenanceLifecycleContracts';
 import type { Member } from '../../domain/members/Member';
 import type { MaintenanceOccurrence } from '../../domain/maintenance/MaintenanceOccurrence';
 import { assertVersion } from '../../domain/maintenance/MaintenanceTypes';
@@ -82,6 +84,8 @@ async function planIn(
   id: string,
   revision: number,
 ): Promise<AvailabilityPlan> {
+  if (await tx.retention.find(scope, id))
+    throw new AvailabilityError('AVAILABILITY_DISPOSED');
   const plan = await tx.availability.find(scope, id, revision);
   if (!plan) throw new AvailabilityError('WINDOW_NOT_CONFIGURED');
   return plan;
@@ -108,6 +112,8 @@ export class AvailabilityUseCases {
           occurrence.toRecord().availabilityRevision !== event.revision ||
           !(await audienceIn(tx, occurrence)).includes(event.memberId ?? '')
         )
+          return false;
+        if (await tx.retention.find(event.congregationId, event.occurrenceId))
           return false;
         const plan = await tx.availability.find(
           event.congregationId,
@@ -145,6 +151,8 @@ export class AvailabilityUseCases {
           throw new AvailabilityError('FORBIDDEN');
         const occurrence = await occurrenceIn(tx, actor.congregationId, id);
         scheduled(occurrence);
+        if (await tx.retention.find(actor.congregationId, id))
+          throw new AvailabilityError('AVAILABILITY_DISPOSED');
         checkVersion(occurrence.version, expectedOccurrenceVersion);
         const revision = occurrence.toRecord().availabilityRevision;
         const existing = await tx.availability.find(
@@ -274,8 +282,6 @@ export class AvailabilityUseCases {
         const occurrence = await occurrenceIn(tx, actor.congregationId, id);
         if (!occurrence.canManageTeam(member))
           throw new AvailabilityError('FORBIDDEN');
-        if (deadline === null && !member.isActiveAdministrator)
-          throw new AvailabilityError('FORBIDDEN');
         scheduled(occurrence);
         currentRevision(occurrence, revision);
         const before = await planIn(tx, actor.congregationId, id, revision);
@@ -361,15 +367,137 @@ export class AvailabilityUseCases {
   ): Promise<void> {
     const occurrence = await occurrenceIn(tx, scope, id);
     if (occurrence.toRecord().availabilityRevision !== revision) return;
+    if (occurrence.toRecord().status === 'cancelled') {
+      await this.discardCancelledIn(tx, occurrence.toRecord(), this.now());
+      return;
+    }
+    if (await tx.retention.find(scope, id)) return;
     const before = await tx.availability.find(scope, id, revision);
     if (!before) return;
     const now = this.now();
-    // Cancellation blocks delivery through the occurrence and preserves technical responses.
-    let after = before.expire(now);
-    if (occurrence.toRecord().status === 'cancelled') after = after.close();
-    else after = after.reconcile(await audienceIn(tx, occurrence));
+    const after = before
+      .expire(now)
+      .reconcile(await audienceIn(tx, occurrence));
     await this.commit(tx, before, after, now, null);
   }
+  /** Required hook from maintenance rescheduling, inside its existing transaction. */
+  async rescheduleIn(
+    tx: AvailabilityUnitOfWork,
+    input: AvailabilityReschedule,
+  ): Promise<void> {
+    const { before, after, deadlineDecision, occurredAt: now, actorId } = input;
+    assertDeadlineDecision(deadlineDecision);
+    instant(now);
+    const stored = await occurrenceIn(tx, after.congregationId, after.id);
+    if (
+      stored.version !== after.version ||
+      before.id !== after.id ||
+      before.congregationId !== after.congregationId
+    )
+      throw new AvailabilityError('VERSION_CONFLICT');
+    scheduled(stored);
+    if (await tx.retention.find(after.congregationId, after.id))
+      throw new AvailabilityError('AVAILABILITY_DISPOSED');
+    const previous = await tx.availability.find(
+      before.congregationId,
+      before.id,
+      before.availabilityRevision,
+    );
+    if (previous) {
+      if (deadlineDecision.expectedVersion === null)
+        throw new AvailabilityError('VERSION_CONFLICT');
+      checkVersion(
+        previous.toRecord().version,
+        deadlineDecision.expectedVersion,
+      );
+    } else if (deadlineDecision.expectedVersion !== null)
+      throw new AvailabilityError('VERSION_CONFLICT');
+    if (!previous && deadlineDecision.kind === 'keep')
+      throw new AvailabilityError('WINDOW_NOT_CONFIGURED');
+    const deadline =
+      deadlineDecision.kind === 'replace'
+        ? deadlineDecision.deadline
+        : previous?.toRecord().deadline;
+    if (!deadline) throw new AvailabilityError('WINDOW_NOT_CONFIGURED');
+    const audience = await audienceIn(tx, stored);
+    if (
+      previous &&
+      before.availabilityRevision === after.availabilityRevision
+    ) {
+      const changed = previous
+        .expire(now)
+        .reconcile(audience)
+        .changeDeadline(deadline)
+        .expire(now);
+      const next = await this.commit(
+        tx,
+        previous,
+        changed,
+        now,
+        actorId,
+        previous.toRecord().deadline === deadline
+          ? undefined
+          : 'deadline_changed',
+      );
+      if (previous.toRecord().deadline !== deadline)
+        await this.schedule(tx, next);
+    } else {
+      const initial = AvailabilityPlan.create({
+        congregationId: after.congregationId,
+        occurrenceId: after.id,
+        revision: after.availabilityRevision,
+        deadline,
+        audience,
+      });
+      const next = AvailabilityPlan.restore({
+        ...initial.toRecord(),
+        closed:
+          (previous ? !previous.isOpen(now) : false) ||
+          instant(now) >= instant(deadline),
+      });
+      if (!(await tx.availability.insertIfAbsent(next)))
+        throw new AvailabilityError('VERSION_CONFLICT');
+      await this.emit(tx, next, 'window_configured', now, actorId);
+      if (next.toRecord().closed)
+        await this.emit(tx, next, 'window_closed', now, actorId);
+      if (after.availabilityRevision > before.availabilityRevision)
+        await this.emit(tx, next, 'reconfirmation_required', now, actorId);
+      if (next.isOpen(now))
+        for (const memberId of audience)
+          await this.emit(
+            tx,
+            next,
+            'invitation_needed',
+            now,
+            actorId,
+            memberId,
+          );
+      await this.schedule(tx, next);
+    }
+  }
+
+  /** Trusted cancellation transaction hook; no fabricated completion status. */
+  async discardCancelledIn(
+    tx: AvailabilityUnitOfWork,
+    record: import('../../domain/maintenance/MaintenanceOccurrence').OccurrenceRecord,
+    now: string,
+  ): Promise<void> {
+    const stored = await occurrenceIn(tx, record.congregationId, record.id);
+    if (
+      stored.toRecord().status !== 'cancelled' ||
+      stored.version !== record.version
+    )
+      throw new AvailabilityError('VERSION_CONFLICT');
+    instant(now);
+    await tx.retention.discardOccurrence({
+      congregationId: record.congregationId,
+      occurrenceId: record.id,
+      terminal: 'cancelled',
+      sourceVersion: record.version,
+      effectiveAt: now,
+    });
+  }
+
   /** Durable deadline handler; stale generations/revisions are harmless no-ops. */
   closeDue(command: AvailabilityDeadline): Promise<void> {
     return this.dependencies.transactions.run(
@@ -433,7 +561,10 @@ export class AvailabilityUseCases {
       await this.emit(tx, after, 'window_closed', now, actorId, null, {
         windowGeneration: old.windowGeneration,
       });
-    if (next.windowGeneration !== old.windowGeneration)
+    if (
+      next.windowGeneration !== old.windowGeneration &&
+      kind !== 'deadline_changed'
+    )
       await this.emit(tx, after, 'window_reopened', now, actorId);
     if (JSON.stringify(old.audience) !== JSON.stringify(next.audience)) {
       await this.emit(tx, after, 'eligibility_changed', now, actorId);

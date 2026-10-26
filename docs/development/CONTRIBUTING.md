@@ -44,3 +44,7 @@ Não acrescentar funcionalidades fora do PRD, métricas de frequência ou fiscal
 ## Testes de disponibilidade
 
 Preservar os testes de modalidades, prazo exato, exceção Sim para Não, reconfirmação e convites obsoletos. Simular falhas de eventos/jobs, CAS e rollback da reconciliação na unidade de trabalho compartilhada. Adaptadores reais precisarão passar testes equivalentes com concorrência entre processos e agendamento independente do aplicativo. Não usar a fila de testes como implementação do servidor. Ver ADR-006.
+
+Nos ajustes finais da entrega 04, revisar a matriz preservar/reconfirmar × manter/substituir prazo, versões de ambos os agregados e rollback conjunto. Hooks de ciclo de vida e histórico técnico são obrigatórios; adaptadores não podem ignorar descarte ou copiar payloads pessoais para o arquivo anual. Os exemplos de cancelamento em memória testam contratos, nunca exclusão física ou conclusão técnica real.
+
+Regressões de mudanças de equipe/modalidade devem usar `assignTeam`/`configure` e o hook real de reconciliação na mesma unidade de trabalho. Não chamar `refresh` manualmente para fazer passar essas regressões. Testar retirada/reinclusão, preservação dos continuamente elegíveis, falha de CAS/outbox, conflitos e rollback conjunto. A minimização de identificadores em ocorrências terminais é requisito antes de produção e exige testes dos adaptadores reais.

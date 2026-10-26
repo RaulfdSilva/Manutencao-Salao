@@ -284,12 +284,14 @@ describe('availability application', () => {
       (e) => e.kind === 'invitation_needed',
     ).length;
     await uc.refresh(admin.congregationId, 'occurrence', 1);
-    expect(env.plan().toRecord().closed).toBe(true);
+    expect(env.plans.size).toBe(0);
     expect(
       env.events.filter((e) => e.kind === 'invitation_needed'),
-    ).toHaveLength(eventCount);
+    ).toHaveLength(0);
+    expect(env.jobs).toEqual([]);
+    expect(eventCount).toBeGreaterThan(0);
+    expect(env.disposals.size).toBe(1);
     expect(current().toRecord().status).toBe('cancelled');
-    expect(env.plan().response('member')).toBe('yes');
   });
   it('preserves validity when rescheduling with preserve, without automatically reopening deadlines', async () => {
     await configure();
@@ -590,12 +592,10 @@ describe('availability application', () => {
     ).rejects.toMatchObject({ code: 'INVALID_INSTANT' });
     expect(env.plan().toRecord()).toEqual(before);
   });
-  it('keeps early closure administrative until delegation is approved, without restricting authorized reopening', async () => {
+  it('allows an authorized manager to close early and reopen', async () => {
     await configure();
-    await expect(
-      uc.close(manager, 'occurrence', 1, version()),
-    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    await uc.close(admin, 'occurrence', 1, version());
+    await uc.close(manager, 'occurrence', 1, version());
+    expect((await uc.mine(member, 'occurrence')).open).toBe(false);
     await uc.reopen(manager, 'occurrence', 1, later, version());
     expect((await uc.mine(member, 'occurrence')).open).toBe(true);
   });

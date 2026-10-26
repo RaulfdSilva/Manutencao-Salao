@@ -1,3 +1,7 @@
+import type {
+  MaintenanceTechnicalSnapshot,
+  AvailabilityReschedule,
+} from '../../src/application/maintenance/MaintenanceLifecycleContracts';
 import { Member } from '../../src/domain/members/Member';
 import type { MemberRecord } from '../../src/domain/members/Member';
 import { MaintenanceError } from '../../src/domain/maintenance/MaintenanceError';
@@ -46,6 +50,9 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
   rules = new Map<string, RecurrenceRule>();
   occurrences = new Map<string, MaintenanceOccurrence>();
   events: MaintenancePlanningEvent[] = [];
+  audienceChanges: string[] = [];
+  technical: MaintenanceTechnicalSnapshot[] = [];
+  reschedules: AvailabilityReschedule[] = [];
   rejectOccurrenceSave = false;
   rejectRuleSave = false;
   failEvents = false;
@@ -90,6 +97,9 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
   ): Promise<T> {
     const result = this.tail.then(async () => {
       const snapshot = {
+        audienceChanges: [...this.audienceChanges],
+        technical: [...this.technical],
+        reschedules: [...this.reschedules],
         rules: new Map(this.rules),
         occurrences: new Map(this.occurrences),
         events: [...this.events],
@@ -100,6 +110,20 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
         this.occurrences.set(occurrence.id, occurrence);
       };
       const tx: MaintenanceUnitOfWork = {
+        technicalHistory: {
+          record: async (snapshot) => {
+            this.technical.push(snapshot);
+          },
+        },
+        lifecycle: {
+          availabilityAudienceChanged: async (record) => {
+            this.audienceChanges.push(record.id);
+          },
+          availabilityRescheduled: async (input) => {
+            this.reschedules.push(input);
+          },
+          availabilityCancelled: async () => {},
+        },
         members: {
           findById: async (congregationId, id) => {
             const member = this.members.get(id);
@@ -209,6 +233,9 @@ export class MaintenanceTestEnvironment implements MaintenanceTransactions {
       try {
         return await work(tx);
       } catch (error) {
+        this.audienceChanges = snapshot.audienceChanges;
+        this.technical = snapshot.technical;
+        this.reschedules = snapshot.reschedules;
         this.rules = snapshot.rules;
         this.occurrences = snapshot.occurrences;
         this.events = snapshot.events;
