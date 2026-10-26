@@ -38,7 +38,7 @@ export interface MaintenanceTechnicalSnapshot {
   readonly observedAt: string;
   readonly category: MaintenanceCategory;
   readonly schedule: MaintenanceSchedule;
-  readonly status: 'scheduled' | 'cancelled';
+  readonly status: 'scheduled' | 'cancelled' | 'completed';
   readonly source: {
     readonly ruleId: string;
     readonly cycleKey: string;

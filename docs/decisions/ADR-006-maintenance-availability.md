@@ -57,3 +57,9 @@ Permissões e versão da ocorrência são verificadas antes dos efeitos. A recon
 ### Pendência obrigatória antes de produção — minimização terminal
 
 Ocorrências canceladas/encerradas ainda podem conter `assignedMemberIds`, `responsibleMemberIds` e referências de pessoas, inclusive nas consultas integrais `get`/`list`. A correção transacional não elimina esses campos nem dados operacionais necessários de ocorrências ativas. Antes de produção, implementar e testar a minimização de identificadores nas saídas de ocorrências terminais, snapshots, eventos e suas chaves, projeções, logs e armazenamento futuro; aplicar também a cópias offline, backups e restaurações. Manter somente os fatos técnicos/operacionais necessários, sem métricas por pessoa. Isso é requisito de liberação, não melhoria opcional. Não existe conclusão técnica fictícia, migração de privacidade ou exclusão física validada nesta entrega.
+
+## Evolução pela entrega 05 — ADR-007
+
+A limitação anterior de somente scheduled/cancelled corresponde à entrega 04 e é superada pelo ADR-007. `ChecklistUseCases.complete` persiste `completed` e checklist selado, registra recibo/fato anual e chama `discardOccurrence(completionDisposalRequest(receipt))` na MESMA transação. Não é conclusão simulada nem prova de exclusão física. Falha em qualquer porta desfaz todos os efeitos. `refreshIn` não fabrica recibo/horário para concluída sem marcador: rejeita a integração inconsistente.
+
+Correções técnicas posteriores não reabrem janela nem recriam disponibilidade e não registram outra conclusão anual. Pendências podem permanecer abertas após término. Minimização de identificadores legados e tratamento de dados offline/backups continuam obrigatórios antes de produção. Não há banco, executor de jobs, fotos ou sincronização implementados.

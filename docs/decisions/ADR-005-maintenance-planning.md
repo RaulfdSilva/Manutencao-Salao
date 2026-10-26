@@ -94,3 +94,7 @@ O ADR-006 implementa domínio/aplicação de convites e respostas sobre `availab
 ## Decisões finais da entrega 04
 
 Reagendamento agora exige também uma escolha explícita de prazo, independente de preservar/reconfirmar respostas, com atualização transacional da janela. O cancelamento chama retenção de disponibilidade e registra projeção técnica sem membros para controle anual futuro. Os snapshots integrais de atores/equipes descritos na entrega 03 não devem ser tratados como arquivo anual permanente; a minimização de armazenamento está contratada no ADR-006. Nenhum estado completed ou encerramento técnico fictício foi adicionado. Identidade/ciclos, cancelamento definitivo e dados técnicos da ocorrência permanecem preservados.
+
+## Evolução pela entrega 05 — ADR-007
+
+As referências anteriores à ausência de conclusão/checklists descrevem a entrega 03. O ADR-007 introduz conclusão técnica real de domínio/aplicação: `scheduled -> completed`, terminal, sem reagendamento/cancelamento ou recriação do ciclo. Mantém identidade, origem e versões. O horário da conclusão pertence ao snapshot selado e ao fato anual transacional; não é inferido da agenda. Histórico de disponibilidades permanece temporário conforme ADR-006, nunca arquivo pessoal permanente.

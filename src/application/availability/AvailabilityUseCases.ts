@@ -50,6 +50,8 @@ async function actorIn(
   return member;
 }
 function scheduled(occurrence: MaintenanceOccurrence): void {
+  if (occurrence.toRecord().status === 'completed')
+    throw new AvailabilityError('OCCURRENCE_COMPLETED');
   if (occurrence.toRecord().status === 'cancelled')
     throw new AvailabilityError('OCCURRENCE_CANCELLED');
 }
@@ -66,7 +68,7 @@ async function audienceIn(
   occurrence: MaintenanceOccurrence,
 ): Promise<readonly string[]> {
   const record = occurrence.toRecord();
-  if (record.status === 'cancelled') return [];
+  if (record.status !== 'scheduled') return [];
   return (await tx.members.list(record.congregationId))
     .filter(
       (m) =>
@@ -372,6 +374,8 @@ export class AvailabilityUseCases {
       return;
     }
     if (await tx.retention.find(scope, id)) return;
+    if (occurrence.toRecord().status === 'completed')
+      throw new AvailabilityError('COMPLETION_RETENTION_REQUIRED');
     const before = await tx.availability.find(scope, id, revision);
     if (!before) return;
     const now = this.now();
