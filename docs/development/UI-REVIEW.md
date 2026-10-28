@@ -57,3 +57,7 @@ python tests/presentation/navigation_web.py \
 O script serve a exportação somente em localhost, abre três larguras (320, 390 e 768 pixels), testa 18 grupos de verificações e falha em erros JavaScript. As capturas são opcionais e ficam fora do repositório. Não se adiciona dependência Python ao aplicativo.
 
 A exportação Android gera o bundle, sem APK, assinatura ou instalação. Não valida runtime nativo, gesto Voltar do Android, TalkBack, escalas de fonte do sistema ou desempenho. Esses testes em aparelho/emulador permanecem obrigatórios antes da distribuição.
+
+## Hospedagem pública — entrega 08
+
+O modo de desenvolvimento single descrito acima permanece disponível. Para GitHub Pages, existe uma exportação static separada com prefixo `/Manutencao-Salao`, parâmetros fictícios e HTML por rota. Não testar a publicação somente com o servidor SPA. Execute o smoke com `--static --base-path /Manutencao-Salao`, conforme o [guia Pages](../deployment/GITHUB-PAGES.md), para exigir arquivos reais, recursos no prefixo e recarga direta.

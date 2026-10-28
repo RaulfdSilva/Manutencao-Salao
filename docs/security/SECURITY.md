@@ -101,3 +101,9 @@ Provisionamento exige administrador atualmente ativo, isolamento por congregaç�
 A aplicação exibe somente registros fictícios identificados, sem login, sessão, token, backend ou escrita. O contrato `PresentationSource` só permite leitura. A projeção da equipe elimina inativos e omite telefone; o componente também renderiza apenas nome/função. Isso é proteção visual, não controle de acesso de produção. Nenhum dado real sensível deve ser introduzido na demonstração.
 
 Os DTOs técnicos não incluem executores, designados, responsáveis, presença ou métricas por pessoa. Um adaptador futuro deverá validar dados externos e aplicar autorização/minimização no servidor. Preservar os requisitos de expurgo em ocorrências terminais, cópias offline, snapshots e backups; esta entrega não os implementa. Nenhuma operação de domínio é anunciada como salva pela interface. Ver ADR-009.
+
+## Prévia pública — entrega 08
+
+A prévia pública foi expressamente autorizada somente para os dados fictícios da apresentação. O workflow desabilita leitura de .env, não recebe tokens pessoais ou segredos do produto e usa permissões mínimas/OIDC do GitHub para Pages. O artefato contém somente a exportação web, nunca o checkout ou registros do servidor. O preparo rejeita arquivos de ambiente e symlinks. Não confundir permissão de publicar Pages com autorização de acesso a dados reais.
+
+A composição `publicDemo` é exclusivamente fictícia e de leitura; testes verificam IDs/nomes de exemplo e campos mínimos, sem telefones/credenciais/designações individuais. Essa fonte não deve ser substituída por adaptadores privados quando o produto evoluir. Conteúdo público é copiável e pode permanecer em caches; não inserir registros reais ou chaves em variáveis EXPO_PUBLIC. Revisar/separar a prévia antes de qualquer integração real. Testes atuais não certificam código futuro. Requisitos de minimização/retenção do produto real permanecem obrigatórios. Ver ADR-010 e guia Pages.

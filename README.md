@@ -98,3 +98,11 @@ Execute `npm ci` e `npm run web` para abrir a interface no navegador; `npm start
 Abas: Início, Manutenções, Pendências e Equipe. Detalhes de manutenção agrupam o catálogo oficial por equipamento. Os exemplos de datas, resultados, problemas e membros são fictícios, sem gravações, contas ou sessão simulada. O Início permite explorar estados Sem dados e Carregando. Não há controles de presença, distribuição de tarefas ou operações que anunciem salvamento inexistente.
 
 `app/` compõe o Router e injeta uma fonte de leitura isolada de Presentation; os repositórios de domínio permanecem intactos. Componentes próprios, tema escuro, áreas seguras e rótulos acessíveis não exigem biblioteca de UI. `@types/react-dom` foi acrescentado apenas para testes com TypeScript strict. Testes web e exportação Android não substituem validação em aparelho, acessibilidade nativa ou segurança de produção. Ver [ADR-009](docs/decisions/ADR-009-demo-navigation-ui.md).
+
+## Prévia pública — entrega 08
+
+A configuração de GitHub Pages está em `.github/workflows/pages-preview.yml`, independente da CI e limitada à main (push ou disparo manual). A publicação exige merge manual e **Settings > Pages > Build and deployment > Source: GitHub Actions**. O site não é publicado pelo simples push da branch de desenvolvimento.
+
+URL esperada após o primeiro deploy bem-sucedido: **https://raulfdsilva.github.io/Manutencao-Salao/**. Abra no navegador do celular, sem Expo Go ou computador local. Veja o [guia pelo celular](docs/deployment/GITHUB-PAGES.md) para configurar, acompanhar o workflow, encontrar a URL e investigar falhas.
+
+O build público usa exportação static, prefixo oficial do Expo SDK 58, parâmetros dos exemplos e diretórios com index.html, sem fallback SPA. Apenas os dados fictícios existentes são usados, sem gravações/segredos. Não conectar a prévia a futuros registros privados. Desenvolvimento normal na raiz permanece disponível. Ver [ADR-010](docs/decisions/ADR-010-github-pages-preview.md).
