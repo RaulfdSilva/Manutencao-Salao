@@ -1,6 +1,6 @@
 # Arquitetura
 
-Aplicativo modular com Expo Router e TypeScript strict. Há uma rota estática, domínio/casos de uso de membros, planejamento, disponibilidade, checklists e conclusão técnica (entregas 01–05), além da configuração e provisionamento do catálogo de áudio (entrega 06). Não existem adaptadores de persistência, autenticação ou telas funcionais desses módulos.
+Aplicativo modular com Expo Router e TypeScript strict. Há domínio/casos de uso de membros, planejamento, disponibilidade, checklists e conclusão técnica (entregas 01–05), catálogo de áudio (entrega 06) e apresentação navegável demonstrativa (entrega 07). As telas usam fonte fictícia isolada, sem adaptadores de persistência, autenticação ou ligação a dados reais.
 
 ## Direção das dependências
 
@@ -110,3 +110,13 @@ Cancelamento e preenchimento devem adquirir a mesma coordenação transacional a
 Infrastructure contém JSON versionado, parser Zod e conversão para `InitialChecklistCatalog`, contrato interno imutável. A aplicação recebe configuração por injeção e não depende do arquivo/parser. IDs e associações expandem para `VerificationDefinition`; modelos/snapshots seguem o domínio existente, sem sistema paralelo. Somente áudio é suportado; uma área futura exigirá revisão da identidade congregação/periodicidade.
 
 `ChecklistUseCases.provisionInitialCatalog` compartilha transação, autorização e recibos existentes. Insere modelos ausentes condicionalmente, preserva todos os existentes e registra um evento técnico `catalog_provisioned` por comando com criações (version = versão do catálogo, não versão de modelo). Resultado/recibo informam versões individuais e created/preserved. Falhas revertem tudo; replays revalidam autorização e não repetem efeitos. A serialização futura deve incluir edições administrativas. Nenhum import provisiona dados; não há adaptador de persistência, seed real ou composição autenticada nesta entrega. Ver ADR-008 e documento da matriz.
+
+## Apresentação navegável — entrega 07
+
+`app/(tabs)` define quatro abas; `app/maintenance/[id]` e `app/issues/[id]` definem detalhes reais do Router. As rotas delegam a `src/presentation/screens`. Componentes reutilizáveis de cartões, títulos, indicadores, botões e estados vazios compartilham tema escuro; áreas seguras e navegação ficam na apresentação.
+
+`app/_layout` é a composição explícita autorizada a importar Infrastructure e Presentation. Carrega/valida o catálogo oficial e injeta `createDemoSource` via `DemoProvider`. A fonte implementa `PresentationSource.load`, devolvendo DTOs mínimos e imutáveis de exemplos; não importa repositórios nem executa operações de escrita. Campos privados e inativos não fazem parte da projeção de equipe. O contexto contém estado de leitura/visualização, não autenticação ou domínio global.
+
+Os exemplos de checklist derivam diretamente dos modelos do catálogo e são agrupados por equipamento, sem acumular periodicidades. Fontes reais futuras deverão validar entradas e aplicar autorização no servidor antes de entregar DTOs; ocultar campo no componente não comprova segurança. Seletores de demonstração não persistem dados. Nenhuma regra de negócio dos módulos 01–06 foi modificada.
+
+Vitest usa React Native Web e React DOM para verificar componentes em Node; esse alias está apenas na configuração de testes, não no bundle nativo. Navegação real é verificada opcionalmente pelo script Python/Playwright com a exportação web. Exportar Android não equivale a teste em dispositivo ou TalkBack. Ver ADR-009 e `docs/development/UI-REVIEW.md`.

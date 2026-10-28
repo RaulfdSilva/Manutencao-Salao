@@ -60,3 +60,7 @@ Manter IDs opacos de comandos e recibos sem identidade de solicitante. O armazen
 Ler ADR-008 e a matriz transcrita. Os testes de catálogo comparam todas as associações à lista aprovada, incluindo ausência de pares extras; não gerar o resultado esperado a partir do mesmo JSON que se quer conferir. Preservar IDs ao revisar descrições. Distinguir a transcrição recebida da conferência visual ainda pendente. Fixtures sintéticas dos módulos anteriores não são procedimentos oficiais.
 
 Testar reexecução, modelos administrativos preservados, snapshots, permissões, isolamento, inserção concorrente e rollback conjunto. Alterar versão/arquivo do catálogo não autoriza sobrescrever modelos instalados. Não criar inicialização em imports ou script que finja persistência sem adaptadores.
+
+## Interface — entrega 07
+
+Consultar ADR-009 e o roteiro `UI-REVIEW.md`. Componentes React Native não contêm regras de escrita do domínio. Exemplos de apresentação são explicitamente fictícios e separados dos adaptadores de testes. Modelos de dados projetam apenas os campos públicos; rótulos e cor devem comunicar estados conjuntamente. Testes de componentes usam RN Web/React DOM no Vitest; a única adição de tipos é `@types/react-dom`. A navegação real pode ser exercitada com o script opcional Python/Playwright documentado, sem exigir ferramentas Python no aplicativo ou na CI Node. Não confundir exportação Android com teste nativo.
