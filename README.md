@@ -1,6 +1,6 @@
 # Manutenção Salão
 
-Aplicativo móvel para organizar manutenções de uma única congregação, com escopo inicial em equipamentos de áudio. O MVP 1.0 exige preenchimento colaborativo offline, sem controle de presença, frequência ou avaliação dos voluntários. **Estágio: bootstrap, entregas 01/02 de membros, entrega 03 do planejamento de manutenções, entrega 04 de convites/disponibilidade e entrega 05 de checklists, pendências e conclusão técnica, sem integração de produção.** A única tela é uma indicação estática de inicialização.
+Aplicativo móvel para organizar manutenções de uma única congregação, com escopo inicial em equipamentos de áudio. O MVP 1.0 exige preenchimento colaborativo offline, sem controle de presença, frequência ou avaliação dos voluntários. **Estágio: bootstrap, entregas 01/02 de membros, entrega 03 do planejamento de manutenções, entrega 04 de convites/disponibilidade e entrega 05 de checklists, pendências e conclusão técnica e entrega 06 do catálogo de áudio, sem integração de produção.** A única tela é uma indicação estática de inicialização.
 
 ## Requisitos e implementação
 
@@ -77,10 +77,16 @@ A correção de integração de equipes torna obrigatório reconciliar disponibi
 
 ## Checklists e conclusão técnica — entrega 05
 
-`src/domain/checklists` e `src/application/checklists` contêm modelos versionados por periodicidade, snapshots por ocorrência, verificações por par tarefa/categoria, pendências independentes e correções administrativas. A matriz oficial revisada em 30/05/2026 não foi localizada/conferida: não há catálogo oficial incluído. Fixtures são sintéticas.
+`src/domain/checklists` e `src/application/checklists` contêm modelos versionados por periodicidade, snapshots por ocorrência, verificações por par tarefa/categoria, pendências independentes e correções administrativas. Na entrega 05 não havia catálogo oficial incluído. A entrega 06 adiciona a transcrição fornecida pelo responsável, com revisão de 2026; a fotografia original não foi conferida. Os dados anteriores de teste continuam sintéticos.
 
 Somente administrador altera modelos; administrador ou responsável vinculado acrescenta tarefas ocasionais, conclui a manutenção e resolve pendências. O preenchimento segue a modalidade e a elegibilidade atual. Não há executor identificado, atribuição de tarefas, reserva ou presença. Problemas exigem descrição; fotos são apenas referências contratuais futuras. Corrigir o resultado nunca apaga um problema real.
 
 A conclusão permite itens sem preenchimento e pendências abertas, sela o checklist, torna a ocorrência `completed`, registra o fato anual e descarta disponibilidade na mesma transação contratual. Correções posteriores são administrativas, preservam antes/depois, data e natureza, sem reabrir nem contar outra conclusão. Versões e recibos de comandos protegem contra sobrescrita e repetição. Os testes usam adaptadores em memória; não comprovam transações, exclusão física ou segurança de produção. Ver [ADR-007](docs/decisions/ADR-007-checklists-technical-completion.md).
 
 Cancelamento é exclusivo do administrador e só é permitido antes de qualquer trabalho técnico. Checklist vazio não bloqueia; primeira verificação preenchida ou problema registrado bloqueiam definitivamente, mesmo após limpar o resultado. Trabalho interrompido pode ser concluído por administrador/responsável autorizado, mantendo pendências abertas. O histórico técnico e o cancelamento compartilham a transação contratual; ver correção nos ADRs 005/007.
+
+## Catálogo de áudio — entrega 06
+
+A [matriz transcrita](docs/catalogs/audio-maintenance-matrix-2026.md) possui 15 tarefas, 9 categorias e 50 verificações independentes (6 quinzenais, 15 mensais, 12 trimestrais, 17 semestrais). A configuração JSON versionada fica em `src/infrastructure/catalogs`, validada com Zod e convertida para os modelos existentes. Não acumula frequências automaticamente.
+
+`ChecklistUseCases.provisionInitialCatalog` é explícito, exige administrador ativo e cria somente modelos ausentes numa transação com evento/recibo. Preserva integralmente revisões administrativas e snapshots existentes. Imports não inicializam dados; sem servidor/banco real, só há execução do contrato nos testes. Ver [ADR-008](docs/decisions/ADR-008-official-audio-catalog.md) para origem, limitações e evolução por área.

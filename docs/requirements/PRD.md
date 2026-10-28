@@ -178,7 +178,7 @@ O aplicativo utilizará como referência inicial a matriz de manutenção fornec
 
 A matriz contém tarefas distribuídas por periodicidade e por categorias de equipamentos, incluindo microfones, reprodutores de áudio, mesa de som, equalizadores, amplificadores, sonofletores, caixas acústicas, cabos e conexões.
 
-Os itens exatos deverão ser transcritos e conferidos com uma fonte legível antes de implementar o catálogo definitivo.
+A entrega 06 incorpora a transcrição de trabalho fornecida pelo responsável, com ano de revisão confirmado em 2026, conforme [matriz documentada](../catalogs/audio-maintenance-matrix-2026.md). A fotografia original ainda precisa de conferência visual; não foram acrescentados procedimentos ou associações.
 
 ### Tarefas adicionais
 
@@ -388,7 +388,7 @@ Esses itens não devem ser adicionados pelo Codex sem uma nova decisão de produ
 
 Antes da implementação completa, será necessário:
 
-1. Conferir e transcrever integralmente o checklist da organização.
+1. Conferir visualmente a fotografia original contra a transcrição incorporada na entrega 06.
 2. Definir como obter ou importar a escala quinzenal do Hourglass.
 3. Definir o backend, a autenticação e a ativação segura dos dispositivos.
 4. Implementar no servidor a autorização aprovada de resolução de pendências (administrador ou responsável autorizado).
@@ -414,7 +414,7 @@ Antes da implementação completa, será necessário:
 Estas notas registram a conciliação com o histórico do projeto; não acrescentam funcionalidades ao MVP nem substituem decisões pendentes do responsável.
 
 - **Fonte oficial:** as seções 1 a 14 consolidam o PRD fornecido pelo responsável em 24 de outubro de 2026. O [PRD anterior](archive/PRD-pre-MVP-1.0.md) foi preservado somente para consulta histórica; seus RF-01 a RF-24 eram uma decomposição proposta e não devem concorrer com este documento como fonte vigente.
-- **Estado atual:** existem o bootstrap, as entregas 01/02 de membros, a entrega 03 do domínio/casos de uso de planejamento de manutenções, a entrega 04 de convites/disponibilidade e a entrega 05 de checklists, pendências e conclusão técnica. Ainda não existem autenticação, backend, persistência local, sincronização, calendário visual, envio de notificações ou telas funcionais do MVP. A tela estática atual não representa o tema ou a navegação definitivos.
+- **Estado atual:** existem o bootstrap, as entregas 01/02 de membros, a entrega 03 do domínio/casos de uso de planejamento de manutenções, a entrega 04 de convites/disponibilidade, a entrega 05 de checklists, pendências e conclusão técnica e a entrega 06 do catálogo de áudio. Ainda não existem autenticação, backend, persistência local, sincronização, calendário visual, envio de notificações ou telas funcionais do MVP. A tela estática atual não representa o tema ou a navegação definitivos.
 - **Adequação de membros — entrega 02:** `get` e `list` permitem consulta da equipe ativa por membros ativos autorizados; administradores ativos também consultam inativos e telefones. Não administradores recebem respostas sem a propriedade `phone`; consulta de inativo por não administrador retorna o mesmo erro de cadastro inexistente. Solicitantes inativos continuam sem acesso. A divergência registrada na consolidação documental foi resolvida em código/testes, sem implementar autenticação; ver [ADR-004](../decisions/ADR-004-member-access-concurrency.md).
 - **Regras anteriores complementares preservadas:** permanecem as decisões aprovadas de um papel por membro, estados `active`/`inactive`, identificador imutável, proteção do último administrador ativo, cadastro separado da identidade de acesso, ausência de login por e-mail e senha, ativação com token temporário de uso único e reativação que restaura elegibilidade sem reautorizar dispositivos explicitamente revogados. A consulta da equipe não concede acesso a membros ou dispositivos com acesso revogado.
 - **Recorrência conciliada na entrega 03:** o responsável confirmou primeiro/terceiro fins de semana com sábado de referência e possibilidade de execução no sábado ou domingo. Domingo dia 1 pertence ao mês anterior. O contrato da escala de áudio não pressupõe o formato ou API do Hourglass; essa integração permanece pendente. Ver [ADR-005](../decisions/ADR-005-maintenance-planning.md).
@@ -478,10 +478,18 @@ Administrador ativo ou responsável autorizado conclui a manutenção após cons
 
 Após conclusão, somente administrador pode corrigir resultados, preservando registro anterior/posterior, data e natureza técnica, sem reabrir ou contar outra manutenção. Problemas existentes não são apagados; sua resolução é operação independente. Não há métricas individuais ou comprovação de presença. Referências pessoais antigas em ocorrências/eventos ainda exigem minimização antes da produção.
 
-Permanecem futuras: catálogo oficial validado, banco/transações reais, backend/autorização, sincronização offline e conflitos avançados, armazenamento de fotografias, interface e minimização em snapshots/logs/backups. A regra do ano em reagendamentos entre anos segue pendente; fatos técnicos são preservados sem inventar painel ou critério de contabilização.
+Permanecem futuras: conferência visual da matriz original (a entrega 06 inclui a transcrição fornecida), banco/transações reais, backend/autorização, sincronização offline e conflitos avançados, armazenamento de fotografias, interface e minimização em snapshots/logs/backups. A regra do ano em reagendamentos entre anos segue pendente; fatos técnicos são preservados sem inventar painel ou critério de contabilização.
 
 ### Correção da entrega 05 — cancelamento antes dos trabalhos
 
 `MaintenanceUseCases.cancel` consulta obrigatoriamente `technicalWork.hasRecordedWork` na mesma transação e fornece o fato à regra de domínio. Havendo trabalho registrado, a operação retorna `TECHNICAL_WORK_RECORDED` sem alterar ocorrência, histórico, eventos ou disponibilidade. O checklist preserva `technicalWorkRecorded`, booleano técnico irreversível, junto das versões e resultados; não contém data de presença ou identidade de executor. O contrato também considera qualquer problema persistido, não somente os resultados atuais.
 
 A consulta do histórico e as escritas de cancelamento/preenchimento/problemas precisam da mesma serialização no servidor, inclusive quando ainda não existe checklist. CAS por agregado isolado ou leituras READ COMMITTED sem coordenação não bastam. Testes usam uma unidade de trabalho compartilhada em memória; não demonstram banco real. Registros legados sem o novo fato exigem migração explícita baseada em evidências confiáveis; não inferir ausência de trabalho apenas por resultados atuais vazios nem liberar cancelamento com histórico desconhecido. Nenhuma migração ou saneamento de pendências legadas foi implementado.
+
+## Implementação 06 — catálogo inicial de manutenção de áudio
+
+A transcrição fornecida contém exatamente 15 tarefas e 9 categorias de equipamento, resultando em 50 verificações por par tarefa/categoria: 6 quinzenais, 15 mensais, 12 trimestrais e 17 semestrais. As descrições e todas as associações estão em `docs/catalogs/audio-maintenance-matrix-2026.md`; os dados versionados estão em Infrastructure. A referência é a revisão de 2026, historicamente registrada como 30/05/2026. Conferência por testes significa fidelidade à lista recebida, não à fotografia indisponível.
+
+Não há acumulação automática entre periodicidades. Cada ocorrência continua usando o modelo de sua própria periodicidade; uma composição oficial diferente exige validação antes de mudar o comportamento. Os IDs técnicos de tarefas/categorias independem dos nomes exibidos.
+
+O provisionamento inicial é explícito, permitido somente a administrador ativo e idempotente: cria modelos ausentes, preserva qualquer modelo existente e nunca altera checklists já criados. Revisões administrativas continuam pelos casos de uso e versões existentes. Imports não geram dados; atualizar arquivo/reexecutar provisionamento não sobrescreve instalações. Não há banco real ou seed executado em congregação nesta entrega. Ver ADR-008 para a operação transacional e as limitações de futuras áreas.

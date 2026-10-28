@@ -1,3 +1,4 @@
+import type { CatalogProvisioningResult } from './InitialChecklistCatalog';
 import type { MemberRepository } from '../../domain/members/MemberRepository';
 import type { OccurrenceRepository } from '../../domain/maintenance/MaintenanceRepository';
 import type {
@@ -9,6 +10,7 @@ import type { ChecklistSummary } from '../../domain/checklists/MaintenanceCheckl
 import type { AvailabilityRetention } from '../availability/AvailabilityContracts';
 import type { AnnualMaintenanceHistory } from '../maintenance/MaintenanceLifecycleContracts';
 export interface ChecklistCommandResult {
+  readonly catalogProvisioning?: CatalogProvisioningResult;
   readonly templateVersion?: number;
   readonly checklistVersion?: number;
   readonly occurrenceVersion?: number;
@@ -26,6 +28,7 @@ export interface ChecklistTechnicalEvent {
   readonly congregationId: string;
   readonly occurrenceId: string | null;
   readonly kind:
+    | 'catalog_provisioned'
     | 'template_updated'
     | 'checklist_created'
     | 'occasional_added'

@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "id": "audio-maintenance-matrix",
+  "version": 1,
+  "areaId": "audio",
+  "source": {
+    "title": "Matriz de manutenção de áudio",
+    "revisionDate": "2026-05-30",
+    "revisionYear": 2026,
+    "basis": "owner-provided-transcription",
+    "originalPhotographVerified": false,
+    "reference": "docs/catalogs/audio-maintenance-matrix-2026.md"
+  },
+  "equipmentCategories": [
+    {
+      "id": "microphones",
+      "name": "Microfones"
+    },
+    {
+      "id": "cd-dvd-player",
+      "name": "CD/DVD Player"
+    },
+    {
+      "id": "mixing-console",
+      "name": "Mesa de som"
+    },
+    {
+      "id": "equalizers",
+      "name": "Equalizadores"
+    },
+    {
+      "id": "amplifiers",
+      "name": "Amplificadores"
+    },
+    {
+      "id": "loudspeakers",
+      "name": "Alto-falantes"
+    },
+    {
+      "id": "speaker-cabinets",
+      "name": "Caixas acústicas"
+    },
+    {
+      "id": "audio-cables",
+      "name": "Cabos de áudio"
+    },
+    {
+      "id": "power-cables",
+      "name": "Cabos de força"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "audio-q01",
+      "code": "Q01",
+      "periodicity": "fortnightly",
+      "description": "Verificação dos cabos de microfone",
+      "equipmentCategoryIds": ["microphones", "audio-cables"]
+    },
+    {
+      "id": "audio-q02",
+      "code": "Q02",
+      "periodicity": "fortnightly",
+      "description": "Verificação de pilhas ou baterias",
+      "equipmentCategoryIds": ["microphones"]
+    },
+    {
+      "id": "audio-q03",
+      "code": "Q03",
+      "periodicity": "fortnightly",
+      "description": "Verificação das marcações e ajustes",
+      "equipmentCategoryIds": ["mixing-console", "equalizers", "amplifiers"]
+    },
+    {
+      "id": "audio-m01",
+      "code": "M01",
+      "periodicity": "monthly",
+      "description": "Teste de reprodução",
+      "equipmentCategoryIds": ["cd-dvd-player"]
+    },
+    {
+      "id": "audio-m02",
+      "code": "M02",
+      "periodicity": "monthly",
+      "description": "Verificação das luzes piloto",
+      "equipmentCategoryIds": [
+        "cd-dvd-player",
+        "mixing-console",
+        "equalizers",
+        "amplifiers"
+      ]
+    },
+    {
+      "id": "audio-m03",
+      "code": "M03",
+      "periodicity": "monthly",
+      "description": "Limpeza geral",
+      "equipmentCategoryIds": [
+        "microphones",
+        "cd-dvd-player",
+        "mixing-console",
+        "equalizers",
+        "amplifiers",
+        "audio-cables",
+        "power-cables"
+      ]
+    },
+    {
+      "id": "audio-m04",
+      "code": "M04",
+      "periodicity": "monthly",
+      "description": "Teste das entradas (line, mic, aux, etc.)",
+      "equipmentCategoryIds": ["mixing-console", "equalizers", "amplifiers"]
+    },
+    {
+      "id": "audio-t01",
+      "code": "T01",
+      "periodicity": "quarterly",
+      "description": "Verificação do estado do cordão de força",
+      "equipmentCategoryIds": [
+        "cd-dvd-player",
+        "mixing-console",
+        "equalizers",
+        "amplifiers"
+      ]
+    },
+    {
+      "id": "audio-t02",
+      "code": "T02",
+      "periodicity": "quarterly",
+      "description": "Inspeção e limpeza dos potenciômetros",
+      "equipmentCategoryIds": ["mixing-console", "equalizers", "amplifiers"]
+    },
+    {
+      "id": "audio-t03",
+      "code": "T03",
+      "periodicity": "quarterly",
+      "description": "Verificação dos cabos dos equipamentos",
+      "equipmentCategoryIds": ["mixing-console", "equalizers", "amplifiers"]
+    },
+    {
+      "id": "audio-t04",
+      "code": "T04",
+      "periodicity": "quarterly",
+      "description": "Inspeção visual de soldas/conexões",
+      "equipmentCategoryIds": ["audio-cables", "power-cables"]
+    },
+    {
+      "id": "audio-s01",
+      "code": "S01",
+      "periodicity": "semiannual",
+      "description": "Inspeção visual dos sonofletores",
+      "equipmentCategoryIds": ["loudspeakers", "speaker-cabinets"]
+    },
+    {
+      "id": "audio-s02",
+      "code": "S02",
+      "periodicity": "semiannual",
+      "description": "Inspeção visual de conexões e cones",
+      "equipmentCategoryIds": ["loudspeakers", "speaker-cabinets"]
+    },
+    {
+      "id": "audio-s03",
+      "code": "S03",
+      "periodicity": "semiannual",
+      "description": "Teste geral do sistema",
+      "equipmentCategoryIds": [
+        "microphones",
+        "cd-dvd-player",
+        "mixing-console",
+        "equalizers",
+        "amplifiers",
+        "loudspeakers",
+        "speaker-cabinets",
+        "audio-cables",
+        "power-cables"
+      ]
+    },
+    {
+      "id": "audio-s04",
+      "code": "S04",
+      "periodicity": "semiannual",
+      "description": "Verificação dos fusíveis reservas",
+      "equipmentCategoryIds": [
+        "cd-dvd-player",
+        "mixing-console",
+        "equalizers",
+        "amplifiers"
+      ]
+    }
+  ]
+}
