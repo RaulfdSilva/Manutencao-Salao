@@ -58,3 +58,9 @@ Cancelamento só é permitido antes de trabalho técnico. Preservar o marcador i
 Ler ADR-008 e `docs/catalogs/audio-maintenance-matrix-2026.md`. O catálogo é configuração versionada, validada na fronteira Infrastructure e injetada na aplicação. Não importar JSON/Infrastructure/Zod nas camadas internas. Preservar IDs, 15 tarefas, 9 categorias e associações aprovadas; não inventar procedimentos nem acumular periodicidades. A fonte desta entrega é a transcrição do responsável, revisão de 2026; não declarar a fotografia conferida.
 
 Provisionamento exige administrador ativo, recibo idempotente e transação compartilhada com edições; cria somente modelos ausentes. Nunca sobrescrever um modelo existente, mesmo vazio ou versão 1, nem atualizar checklists materializados. Não inicializar ao importar ou executar seed sem adaptador real. Outra área não está implementada e exige evolução da identidade dos modelos atuais.
+
+## Interface demonstrativa — entrega 07
+
+Ler ADR-009 e `docs/development/UI-REVIEW.md`. Rotas apenas compõem/delegam telas; `app/_layout` injeta a fonte de leitura. Presentation não importa Infrastructure ou repositórios. Exemplos ficam em `presentation/demo` e não são dados de domínio persistidos. Usar nomes/tarefas do catálogo injetado, não inventar procedimentos. Preservar agrupamento por equipamento e identificação visível de demonstração.
+
+Não transformar papéis fictícios em autenticação, introduzir salvamento simulado, distribuição de tarefas ou presença. Manter DTOs sem telefones/inativos, sem alegar autorização de produção. Antes de conectar dados reais, implementar autorização/validação e adaptar a composição em entrega aprovada. Testes SSR usam RN Web somente em Vitest; bundle Android usa RN nativo. Executar o smoke web opcional quando houver navegador disponível e relatar falta de emulador/aparelho.

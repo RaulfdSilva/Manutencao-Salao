@@ -95,3 +95,9 @@ Conclusão, retenção em todas as revisões e fatos anuais são atômicos por c
 Configuração do catálogo não contém membros, responsáveis, credenciais, presenças ou ocorrências realizadas. Validar schema, IDs, associações e referência de origem na fronteira, sem executar conteúdo da matriz. O servidor futuro deve carregar a configuração aprovada de fonte confiável; um upload/metadata do cliente não prova autenticidade oficial. A transcrição fornecida não equivale a conferência visual da fotografia.
 
 Provisionamento exige administrador atualmente ativo, isolamento por congregação, inserção única e transação comum com edições/evento/recibo. Replays revalidam autorização; o ID de comando não é credencial. Nenhum modelo existente é sobrescrito, inclusive personalizado na versão 1. Recibos guardam configuração técnica e nenhum ator/executor. Não há seed real, autenticação, banco ou prova de segurança de produção. Minimização pessoal em ocorrências terminais permanece obrigatória. Ver ADR-008.
+
+## Interface demonstrativa — entrega 07
+
+A aplicação exibe somente registros fictícios identificados, sem login, sessão, token, backend ou escrita. O contrato `PresentationSource` só permite leitura. A projeção da equipe elimina inativos e omite telefone; o componente também renderiza apenas nome/função. Isso é proteção visual, não controle de acesso de produção. Nenhum dado real sensível deve ser introduzido na demonstração.
+
+Os DTOs técnicos não incluem executores, designados, responsáveis, presença ou métricas por pessoa. Um adaptador futuro deverá validar dados externos e aplicar autorização/minimização no servidor. Preservar os requisitos de expurgo em ocorrências terminais, cópias offline, snapshots e backups; esta entrega não os implementa. Nenhuma operação de domínio é anunciada como salva pela interface. Ver ADR-009.

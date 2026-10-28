@@ -1,5 +1,34 @@
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  loadAudioMaintenanceCatalog,
+  toInitialChecklistCatalog,
+} from '@/infrastructure/catalogs/AudioMaintenanceCatalog';
+import { createDemoSource } from '@/presentation/demo/createDemoSource';
+import { DemoProvider } from '@/presentation/demo/DemoProvider';
+import { colors } from '@/presentation/theme/theme';
 
+// Explicit composition only; loading this read-only source never provisions business records.
+const demoSource = createDemoSource(
+  toInitialChecklistCatalog(loadAudioMaintenanceCatalog()),
+);
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <SafeAreaProvider>
+      <DemoProvider source={demoSource}>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="maintenance/[id]" />
+          <Stack.Screen name="issues/[id]" />
+        </Stack>
+      </DemoProvider>
+    </SafeAreaProvider>
+  );
 }
