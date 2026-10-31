@@ -120,3 +120,11 @@ Infrastructure contém JSON versionado, parser Zod e conversão para `InitialChe
 Os exemplos de checklist derivam diretamente dos modelos do catálogo e são agrupados por equipamento, sem acumular periodicidades. Fontes reais futuras deverão validar entradas e aplicar autorização no servidor antes de entregar DTOs; ocultar campo no componente não comprova segurança. Seletores de demonstração não persistem dados. Nenhuma regra de negócio dos módulos 01–06 foi modificada.
 
 Vitest usa React Native Web e React DOM para verificar componentes em Node; esse alias está apenas na configuração de testes, não no bundle nativo. Navegação real é verificada opcionalmente pelo script Python/Playwright com a exportação web. Exportar Android não equivale a teste em dispositivo ou TalkBack. Ver ADR-009 e `docs/development/UI-REVIEW.md`.
+
+## Prévia estática pública — entrega 08
+
+`app.config.ts` adiciona somente no build `GITHUB_PAGES_PREVIEW=1` a saída static e `experiments.baseUrl=/Manutencao-Salao`. Os parâmetros dinâmicos dos exemplos vêm da mesma fonte fictícia. A composição agora é centralizada em `src/composition/publicDemo.ts`, consumida pelo layout e geradores de parâmetros; não pode ser importada pelas camadas internas. Domínio, aplicação, catálogo e fonte de apresentação permanecem intactos.
+
+O preparo do artefato preserva cada HTML gerado, organizando diretórios index.html e .nojekyll, sem servidor ou fallback SPA. Conhecidos: quatro abas e seis detalhes. Novos IDs exigem enumeração; desconhecidos retornam 404. O teste de navegação ganhou servidor estritamente estático e prefixo configurável, conferindo recursos e recargas diretamente.
+
+O workflow Pages é separado da CI, limitado à main, com permissões por job, OIDC e ambiente github-pages. Não faz merge nem publica branches/PRs. A configuração manual inicial e o deploy após merge são condições reais, não efeitos desta branch. Build usa apenas composição fictícia, sem .env ou credenciais do produto. Não reutilizar esse pipeline para publicar dados privados futuramente. Ver ADR-010 e guia de publicação.

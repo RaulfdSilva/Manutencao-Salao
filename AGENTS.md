@@ -64,3 +64,9 @@ Provisionamento exige administrador ativo, recibo idempotente e transação comp
 Ler ADR-009 e `docs/development/UI-REVIEW.md`. Rotas apenas compõem/delegam telas; `app/_layout` injeta a fonte de leitura. Presentation não importa Infrastructure ou repositórios. Exemplos ficam em `presentation/demo` e não são dados de domínio persistidos. Usar nomes/tarefas do catálogo injetado, não inventar procedimentos. Preservar agrupamento por equipamento e identificação visível de demonstração.
 
 Não transformar papéis fictícios em autenticação, introduzir salvamento simulado, distribuição de tarefas ou presença. Manter DTOs sem telefones/inativos, sem alegar autorização de produção. Antes de conectar dados reais, implementar autorização/validação e adaptar a composição em entrega aprovada. Testes SSR usam RN Web somente em Vitest; bundle Android usa RN nativo. Executar o smoke web opcional quando houver navegador disponível e relatar falta de emulador/aparelho.
+
+## Prévia GitHub Pages — entrega 08
+
+Ler ADR-010 e `docs/deployment/GITHUB-PAGES.md`. Workflow independente da CI, somente main por push/workflow_dispatch com guarda de ref nos jobs; nunca publicar branches/PRs automaticamente. Manter permissões por job e actions oficiais, sem PAT. Publicação real só pode ser afirmada após deploy observado; push da branch não é deploy.
+
+Expo SDK 58 usa experiments.baseUrl no build público e saída static com generateStaticParams da fonte fictícia. Preparar diretórios index.html e .nojekyll; testar recursos, links diretos e recargas sob /Manutencao-Salao sem fallback de servidor. Não usar páginas falsas para mascarar rotas ausentes. A composição pública não pode receber informações reais; manter .env desabilitado, nenhuma credencial e campos mínimos. Integrações privadas futuras exigem separar/revisar essa prévia.

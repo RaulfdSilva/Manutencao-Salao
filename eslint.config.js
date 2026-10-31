@@ -22,19 +22,25 @@ module.exports = defineConfig([
                 './src/infrastructure',
                 './src/presentation',
                 './app',
+                './src/composition',
               ],
             },
             {
               target: './src/application',
-              from: ['./src/infrastructure', './src/presentation', './app'],
+              from: [
+                './src/infrastructure',
+                './src/presentation',
+                './app',
+                './src/composition',
+              ],
             },
             {
               target: './src/infrastructure',
-              from: ['./src/presentation', './app'],
+              from: ['./src/presentation', './app', './src/composition'],
             },
             {
               target: './src/presentation',
-              from: ['./src/infrastructure', './app'],
+              from: ['./src/infrastructure', './app', './src/composition'],
             },
           ],
         },
